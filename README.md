@@ -8,3 +8,5 @@ trought Deep Neural Network (DNN).
 
 The OCP is solved using PSOPT and the DDN using TensorFlow.
 
+# Dockerfile
+There is a dockerfile in the docker folder that creates an enviroment to run PSOPT. 
