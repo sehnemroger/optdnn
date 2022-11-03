@@ -12,13 +12,14 @@ The OCP is solved using PSOPT and the DDN using TensorFlow.
 There is a dockerfile in the docker folder that creates an enviroment to run PSOPT. 
 
 ## Build
-To build the container on your local machine named as optdnn_env, just use: 
-
+To build the container on your local machine named as optdnn_env, cd to /docker and use: 
+```
 docker build . -t optdnn_env 
-
+```
 Note: don't forget the dot.
 
 ## Run 
 To run something in the environment, for example, the example launch of PSOPT, you can use:
-
+```
 docker run -it --rm  optdnn_env:latest ./psopt/build/examples/launch/launch 
+```
