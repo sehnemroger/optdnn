@@ -23,3 +23,7 @@ To run something in the environment, for example, the example launch of PSOPT, y
 ```
 docker run -it --rm  optdnn_env:latest ./psopt/build/examples/launch/launch 
 ```
+Note: To compile your own example you should implement the file /PSOPT/examples/user/user.cxx. Then, cd to /PSOPT/build/examples/user and run 
+```
+make
+```
