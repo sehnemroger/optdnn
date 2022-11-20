@@ -23,11 +23,7 @@ class CustomModel(tf.keras.Model):
                 tape2.watch(y_out)
                 y_pred = y_out[:,0] # The first output is the predicted control.
                 tape2.watch(y_pred)
-                V1 = y_out[:,1] # The second output is the square root of the target for the 
-                # lyapunov function.
-                V2 = y_out[:,2] # The third output is the negative square root of the target for the
-                # lyapunov function derivative wrt time.
-                V = y_out[:,3] # The fourth output is the lyapunov function.
+                V = y_out[:,1] # The second output is the lyapunov function
             ## Computing loss function
             # NOTE:
             # This overwrites the loss function configured in compile()!!!!!!!!
@@ -36,7 +32,6 @@ class CustomModel(tf.keras.Model):
             # convex combination of the mse and msle errors.
             # The second part of the loss function is the part that tries to make the forth
             # output of the dnn a lyapunov function for the system.
-            eps = 1 # Value for the target V and Vdot
             ## Calculating Vdot
             # definindo constantes
             l, I, mb, mc, at, ar = 0.3, 2, 1, 3, .2, .2
@@ -58,7 +53,9 @@ class CustomModel(tf.keras.Model):
             
             # Calculate the loss function
             mse = tf.keras.losses.MeanSquaredError() 
-            loss = custom_loss(y,y_pred) + mse(V1**2+eps,V) + mse(-V2**2-eps,Vdot)
+            relu = tf.keras.layers.ReLU()
+            pen = 10e3
+            loss = custom_loss(y,y_pred) + pen*relu(-V) + pen*relu(Vdot) # Adds the lyapunov penalty 
 
         # Run backwards pass.
         self.optimizer.minimize(loss, self.trainable_variables, tape=tape)
@@ -81,10 +78,10 @@ def custom_loss(y_true, y_pred):
 
 ## Loading trained model
 
-model_old = tf.keras.models.load_model('dnn_trained_old.h5',
+model_old = tf.keras.models.load_model('python/dnn_trained_old.h5',
     custom_objects={ 'custom_loss': custom_loss})
 
-model = tf.keras.models.load_model('dnn_trained_small.h5',
+model = tf.keras.models.load_model('python/dnn_trained_batchnorm_lyap.h5',
     custom_objects={ 'custom_loss': custom_loss,
         'CustomModel': CustomModel})
 

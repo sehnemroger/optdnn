@@ -182,8 +182,8 @@ model = CustomModel(inputs, outputs)
 # # preload treined model 
 # model = tf.keras.models.load_model('dnn_trained_segundo.h5',custom_objects={ 'custom_loss': custom_loss})
 ## Compiling the model
-lr_scheduler = keras.callbacks.ReduceLROnPlateau(factor=0.9, patience=5, verbose=1, min_lr=0.000001, monitor='mse')
-early_stop = tf.keras.callbacks.EarlyStopping(monitor='mse', patience=20, restore_best_weights=True)
+lr_scheduler = keras.callbacks.ReduceLROnPlateau(factor=0.9, patience=3, verbose=1, min_lr=0.000001, monitor='mse')
+early_stop = tf.keras.callbacks.EarlyStopping(monitor='mse', patience=10, restore_best_weights=True)
 model.compile( metrics=['mse'],optimizer=keras.optimizers.Nadam(learning_rate=0.001))
 model.summary()
 
