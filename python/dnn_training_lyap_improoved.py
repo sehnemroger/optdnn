@@ -210,7 +210,7 @@ mse_test = model.evaluate(test_set)
 
 
 ## Saves the model 
-model.save("dnn_trained_batchnorm.h5")
+model.save("dnn_trained_batchnorm_lyap.h5")
 
 # ## Plot learning curves
 # import pandas as pd

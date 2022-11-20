@@ -36,7 +36,7 @@ def preprocess(line): # Function that preprocess the line
 
 
 def dataset_reader(filepaths, repeat=1, n_readers=8,
-     shuffle_buffer_size=10000, batch_size=512):
+     shuffle_buffer_size=10000, batch_size=256):
     dataset = tf.data.Dataset.list_files(filepaths)
     dataset = dataset.interleave(lambda filepath: tf.data.TextLineDataset(filepath), 
         cycle_length=n_readers, num_parallel_calls=tf.data.AUTOTUNE)
