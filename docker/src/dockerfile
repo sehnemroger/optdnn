@@ -1,0 +1,46 @@
+## Pull official tensorflow image compatible with gpu
+FROM tensorflow/tensorflow:latest-gpu
+
+# set work directory
+WORKDIR /usr/src/optdnn
+
+# # Install dependencies for machine learining
+RUN python3 -m pip install --no-cache-dir  --upgrade pip && \
+    pip install --no-cache-dir -U scikit-learn matplotlib pandas
+
+# # Install PSOPT dependencies
+RUN apt-get update && \
+    apt install -y git && \
+    apt-get install -y cmake && \
+    apt-get install -y gfortran && \
+    apt-get install -y g++ && \
+    apt-get install -y libboost-dev && \
+    apt-get install -y libboost-system-dev && \
+    apt-get install -y coinor-libipopt-dev && \
+    apt-get install -y libcolpack-dev && \
+    apt-get install -y libadolc-dev && \
+    apt-get install -y gnuplot && \
+    apt-get install -y libeigen3-dev && \
+    apt-get install -y libblas-dev && \
+    apt-get install -y liblapack-dev
+
+# Download and install PSOPT
+RUN git clone https://github.com/PSOPT/psopt.git; \
+    cd psopt; \
+    mkdir build; \
+    cd build; \
+    cmake -DBUILD_EXAMPLES=ON ..;\
+    make; \
+    make install
+
+## TESTED UNTIL HERE, everything works as intended. We can leav the -DBUILD_EXAMPLES=ON option off in the future.
+# NEEDS TO COPY THE FOLDER WITH THE CORRECT CXX FILE AND CMAKE FILES TO COMPILE
+# AND THEN RUN MAKE
+
+# Test if the build is successful
+# CMD cd ./examples/launch; \
+#     ./launch
+
+# If all went well, /build/examples/launch should have 
+
+    
