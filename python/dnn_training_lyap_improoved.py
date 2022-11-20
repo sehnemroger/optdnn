@@ -173,7 +173,7 @@ inputs = keras.Input(shape=4)
 mid = keras.layers.Dense(4, activation="linear")(inputs)
 for i in range(layers):
     mid = keras.layers.Dense(10, activation="sigmoid")(mid)
-    mid = keras.BatchNormalization()
+    mid = keras.layers.BatchNormalization()(mid)
 outputs = keras.layers.Dense(2,  activation="linear")(mid)
 model = CustomModel(inputs, outputs)
 
