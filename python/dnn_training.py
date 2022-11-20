@@ -50,25 +50,14 @@ test_set = dataset_reader(test_filepaths)
 
 
 ## Creating the DNN
-model = keras.models.Sequential()
-model.add(keras.layers.Input(shape=4))
-model.add(keras.layers.Dense(4, activation="linear"))
-model.add(keras.layers.Dense(100, activation="sigmoid"))
-model.add(keras.layers.Dense(100, activation="sigmoid"))
-model.add(keras.layers.Dense(100, activation="sigmoid"))
-model.add(keras.layers.Dense(100, activation="sigmoid"))
-model.add(keras.layers.Dense(100, activation="sigmoid"))
-model.add(keras.layers.Dense(100, activation="sigmoid"))
-model.add(keras.layers.Dense(90, activation="sigmoid"))
-model.add(keras.layers.Dense(80, activation="sigmoid"))
-model.add(keras.layers.Dense(70, activation="sigmoid"))
-model.add(keras.layers.Dense(60, activation="sigmoid"))
-model.add(keras.layers.Dense(50, activation="sigmoid"))
-model.add(keras.layers.Dense(40, activation="sigmoid"))
-model.add(keras.layers.Dense(30, activation="sigmoid"))
-model.add(keras.layers.Dense(20, activation="sigmoid"))
-model.add(keras.layers.Dense(10, activation="sigmoid"))
-model.add(keras.layers.Dense(4,  activation="linear"))
+layers = 14
+inputs = keras.Input(shape=4)
+mid = keras.layers.Dense(4, activation="linear")(inputs)
+for i in range(layers):
+    mid = keras.layers.Dense(10, activation="sigmoid")(mid)
+    mid = keras.BatchNormalization()
+outputs = keras.layers.Dense(2,  activation="linear")(mid)
+model = tf.keras.Model(inputs, outputs)
 
 ## Creating custom loss Function
 def custom_loss(y_true, y_pred):
@@ -99,7 +88,7 @@ mse_test = model.evaluate(test_set)
 
 
 ## Saves the model 
-model.save("dnn_trained.h5")
+model.save("dnn_trained_batchnorm.h5")
 
 # ## Plot learning curves
 # import pandas as pd
