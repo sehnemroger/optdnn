@@ -5,3 +5,4 @@ PSOPT*
 /python/__pycache__*
 /data_csv
 /__pycache__*
+.vscode/
