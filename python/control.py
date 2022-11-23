@@ -78,7 +78,7 @@ def custom_loss(y_true, y_pred):
 
 ## Loading trained model
 
-model_old = tf.keras.models.load_model('python/dnn_trained_old.h5',
+model_old = tf.keras.models.load_model('python/dnn_trained_batchnorm.h5',
     custom_objects={ 'custom_loss': custom_loss})
 
 model = tf.keras.models.load_model('python/dnn_trained_batchnorm_lyap.h5',
@@ -98,9 +98,12 @@ def controle_old(t,x):
     u = model_old.predict(np.array([x]))
     return u
 
-def invert_pend(t,x,l,I,mb,mc,at,ar):
+def invert_pend(t,x,l,I,mb,mc,at,ar,is_old):
     x1,x2,x3,x4 = x
-    u = controle(t,x)
+    if is_old:
+        u = controle_old(t,x)
+    else:
+        u = controle(t,x)
     g = 9.8
     C1 = l*mb
     C2 = I+l**2*mb
@@ -116,7 +119,7 @@ def invert_pend(t,x,l,I,mb,mc,at,ar):
 l, I, mb, mc, at, ar = 0.3, 2, 1, 3, .2, .2
 
 # Condição inicial
-x0 = [-.4, -.4, 0, 0]
+x0 = [0, 0, .1415, 0]
 print(str(old))
 print('Estado inicial: \n '
     'x: ' +       str(x0[0]) + ' m\n'+
@@ -126,8 +129,8 @@ print('Estado inicial: \n '
 
 # Resolvendo o PVI
 from scipy.integrate import solve_ivp
-from scipy.integrate import odeint
-sol = solve_ivp(invert_pend, [0,100] ,x0, args=(l,I,mb,mc,at,ar))
+sol = solve_ivp(invert_pend, [0,30] ,x0, args=(l,I,mb,mc,at,ar, False))
+sol_old = solve_ivp(invert_pend, [0,30] ,x0, args=(l,I,mb,mc,at,ar,True))
 #sol = odeint(invert_pend, x0, [0,30] , tfirst=True, args=(l,I,mb,mc,at,ar))
 
 # Recalcula o controle
@@ -135,6 +138,11 @@ t=sol.t
 F = np.zeros_like(t)
 for i in range(len(t)):
     F[i] = controle(t[i],sol.y[:,i])
+
+t_old=sol.t
+F_old = np.zeros_like(t)
+for i in range(len(t)):
+    F_old[i] = controle_old(t_old[i],sol_old.y[:,i])
 
 # Indice de desempenho
 r = 1
@@ -148,29 +156,55 @@ Jt = np.zeros_like(t)
 for i in range(len(t)):
     Jt[i] = desemp(sol.y[:,i],F[i],t[i])
 
+Jt_old = np.zeros_like(t_old)
+for i in range(len(t_old)):
+    Jt_old[i] = desemp(sol_old.y[:,i],F_old[i],t_old[i])
+
 
 J = np.trapz(Jt,x=t)
-print(J)
+print('O novo indice de desempenh é: ' + str(J))
 
+J_old = np.trapz(Jt_old,x=t)
+print('O novo indice de desempenh é: ' + str(J_old))
 # Plotando os resultados
 matplotlib.rcParams['text.usetex'] = True # habilitando tex 
 
-fig, axs = plt.subplots(3,1,figsize=(6,4), tight_layout=True)
-axs[0].plot(t,sol.y[0,:],color=(0,0,1))
-axs[0].plot(t,sol.y[1,:],color=(0,.4,1))
-axs[0].legend((r'$x(t)$',r'$\dot{x}(t)$'),loc=1)
-axs[0].set_xlabel('$s$')
-axs[0].set_ylabel('$[m,\ ms^{-1}]$')
+fig, axs = plt.subplots(2,3,figsize=(6,4), tight_layout=True)
+axs[0,0].plot(t,sol.y[0,:],color=(0,0,1))
+axs[0,0].plot(t_old,sol_old.y[0,:],color=(.4,.4,1))
+axs[0,0].legend((r'$x(t)$',r'$x_old(t)$'),loc=1)
+axs[0,0].set_xlabel('$s$')
+axs[0,0].set_ylabel('$[m]$')
 
-axs[1].plot(t,sol.y[2,:]*180/np.pi,color=(0,1,0))
-axs[1].plot(t,sol.y[3,:]*180/np.pi,color=(.4,.8,.4))
-axs[1].legend((r'$\theta(t)$',r'$\dot{\theta}(t)$'),loc=1)
-axs[1].set_xlabel('$s$')
-axs[1].set_ylabel('$[^\circ,\ ^\circ s^{-1}]$')
+axs[0,1].plot(t,sol.y[1,:],color=(0,0,1))
+axs[0,1].plot(t_old,sol_old.y[1,:],color=(.4,.4,1))
+axs[0,1].legend((r'$\dot{x}(t)$',r'$\dot{x}_old(t)$'),loc=1)
+axs[0,1].set_xlabel('$s$')
+axs[0,1].set_ylabel('$[ms^{-1}]$')
 
-axs[2].plot(t,F, color=(1,0,0))
-axs[2].set_xlabel('$s$')
-axs[2].set_ylabel('$[N]$')
+axs[1,0].plot(t,sol.y[2,:]*180/np.pi,color=(0,0,1))
+axs[1,0].plot(t_old,sol_old.y[2,:]*180/np.pi,color=(.4,.4,1))
+axs[1,0].legend((r'$\theta(t)$',r'$\theta_old(t)$'),loc=1)
+axs[1,0].set_xlabel('$s$')
+axs[1,0].set_ylabel('$[^\circ]$')
+
+axs[1,1].plot(t,sol.y[2,:]*180/np.pi,color=(0,0,1))
+axs[1,1].plot(t_old,sol_old.y[2,:]*180/np.pi,color=(.4,.4,1))
+axs[1,1].legend((r'$\dot{\theta}{x}(t)$',r'$\dot{\theta}_old{x}(t)$'),loc=1)
+axs[1,1].set_xlabel('$s$')
+axs[1,1].set_ylabel('$[^\circ s^{-1}]$')
+
+axs[0,2].plot(t,F, color=(0,0,1))
+axs[0,2].plot(t_old,F_old, color=(.4,.4,1))
+axs[0,2].legend((r'$F(t)$',r'$F_old(t)$'),loc=1)
+axs[0,2].set_xlabel('$s$')
+axs[0,2].set_ylabel('$[N]$')
+
+axs[1,2].plot(t,F, color=(0,0,1))
+axs[1,2].plot(t_old,F_old, color=(.4,.4,1))
+axs[1,2].legend((r'$F(t)$',r'$F_old(t)$'),loc=1)
+axs[1,2].set_xlabel('$s$')
+axs[1,2].set_ylabel('$[N]$')
 
 for i in range(3):
     axs[i].grid(True)

@@ -1,15 +1,15 @@
 //////////////////////////////////////////////////////////////////////////
-////////////////        bryson_max_range.cxx         /////////////////////
+////////////////        Inveted Pendulum.cxx         /////////////////////
 //////////////////////////////////////////////////////////////////////////
-////////////////           PSOPT  Example            /////////////////////
+////////////////           Brought to you by:        /////////////////////
+///////////////             Roger M. Sehnem           ////////////////////
 //////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////
-//////// Title:         Bryson maximum range problem      ////////////////
-//////// Last modified: 05 January 2009                   ////////////////
-//////// Reference:     Bryson and Ho (1975)              ////////////////
-//////// (See PSOPT handbook for full reference)          ////////////////
+///// Title:      Optimal control to zero origin of inverted pendulum  ///
+//////// Last modified: 23 Decemvver 2022                 ////////////////
+//////// Reference:     My mathematica file               ////////////////
 //////////////////////////////////////////////////////////////////////////
-////////     Copyright (c) Victor M. Becerra, 2009        ////////////////
+////////     Copyright (c) Roger M. Sehnem, 2022          ////////////////
 //////////////////////////////////////////////////////////////////////////
 //////// This is part of the PSOPT software library, which////////////////
 //////// is distributed under the terms of the GNU Lesser ////////////////
@@ -19,6 +19,30 @@
 #include "psopt.h"
 
 //////////////////////////////////////////////////////////////////////////
+/////////  Declare an auxiliary structure to hold local constants  ///////
+//////////////////////////////////////////////////////////////////////////
+
+// Holds the constants of the inverted pendulum.
+struct Constants_pendulum {
+    adouble l;
+    adouble I;
+    adouble mb;
+    adouble mc;
+    adouble at;
+    adouble ar;
+};
+
+typedef struct Constants_pendulum_;
+
+// Holds the constants for the optimal control formulation.
+struct Optimal_settings {
+    adouble r;
+    adouble q;
+};
+
+typedef struct Optimal_settings_;
+
+//////////////////////////////////////////////////////////////////////////
 ///////////////////  Define the end point (Mayer) cost function //////////
 //////////////////////////////////////////////////////////////////////////
 
@@ -26,9 +50,7 @@ adouble endpoint_cost(adouble* initial_states, adouble* final_states,
                       adouble* parameters,adouble& t0, adouble& tf,
                       adouble* xad, int iphase, Workspace* workspace)
 {
-   adouble x = final_states[0];
-
-   return (-x);
+   return (0.0);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -38,39 +60,67 @@ adouble endpoint_cost(adouble* initial_states, adouble* final_states,
 adouble integrand_cost(adouble* states, adouble* controls, adouble* parameters,
                      adouble& time, adouble* xad, int iphase, Workspace* workspace)
 {
-    return  0.0;
+    // Declare structure that holds parameters for the optimal control
+    // formulation. Pure C++ whitchcraft, basically  magic that I once did
+    // and don't remember what it means.
+    Optimal_settings_ &Optimal_settings = *( (Optimal_settings_ *) workspace->problem->user_data);
+
+    // The constants
+    const r = Optimal_settings.r;
+    const q = Optimal_settings.q;
+
+    // Defining the matrix needed for the cost function
+    const Q = q*eye(4);
+    const R = r*eye(4);
+    // This is a MatrixXd object, see the eigen package for details.
+
+    // This is the cost function of the optimal control problem
+    return  states*Q*states.transpose() + constrols*R*constrols.transpose() + q*time;
 }
 
 
 //////////////////////////////////////////////////////////////////////////
 ///////////////////  Define the DAE's ////////////////////////////////////
+///////////// The dynamics of the pendulum is defined here ///////////////
 //////////////////////////////////////////////////////////////////////////
 
 void dae(adouble* derivatives, adouble* path, adouble* states,
          adouble* controls, adouble* parameters, adouble& time,
          adouble* xad, int iphase, Workspace* workspace)
 {
-   adouble xdot, ydot, vdot;
+   // Structure that holds parameters of the pendulum
+   Constants_pendulum_ &Constants_pendulum = *( (Constants_pendulum_ *) workspace->problem->user_data);
 
-   double g = 1.0;
-   double a = 0.5*g;
+   // Extract parameters from the structure
+   adouble l = Constants_pendulum.l,  I = Constants_pendulum.I;
+   adouble mb = Constants_pendulum.mb, mc = Constants_pendulum.mc;
+   adouble at = Constants_pendulum.at, ar = Constants_pendulum.ar;
 
-   adouble x = states[ 0 ];
-   adouble y = states[ 1 ];
-   adouble v = states[ 2 ];
+   // Defining helper variables
+   adouble g = 9.8; // The acceleration of gravity
+   adouble C1 = l*mb, adouble C2 = I+pow(l,2)*mb;
+   adouble C3 = mb+mc; // Those are just helper constants
 
-   adouble u1 = controls[ 0 ];
-   adouble u2 = controls[ 1 ];
+   // Unpacking states
+   adouble x1 = states[ 0 ];
+   adouble x2 = states[ 1 ];
+   adouble x3 = states[ 2 ];
+   adouble x4 = states[ 3 ];
 
-   xdot = v*u1;
-   ydot = v*u2;
-   vdot = a-g*u2;
+   // Unpacking control
+   adouble u = controls[ 0 ];
 
-   derivatives[ 0 ] = xdot;
-   derivatives[ 1 ] = ydot;
-   derivatives[ 2 ] = vdot;
+   adouble x1_dot, x2_dot, x3_dot, x4_dot;
 
-   path[ 0 ] = (u1*u1) + (u2*u2);
+   x1_dot = x2;
+   x2_dot = (g*C1**2*cos(x3)*sin(x3)+C2*(u-at*x2)-ar*C1*cos(x3)*x4-C1*C2*sin(x3)*x4**2)/(C2*C3-C1**2*cos(x3)**2);
+   x3_dot = x4;
+   x4_dot = (g*C1*C3*sin(x3)+C1*cos(x3)*(u-at*x2)-ar*C3*x4-C1**2*cos(x3)*sin(x3)*x4**2)/(C2*C3-C1**2*cos(x3)**2);
+
+   derivatives[ 0 ] = x1_dot;
+   derivatives[ 1 ] = x2_dot;
+   derivatives[ 2 ] = x3_dot;
+   derivatives[ 3 ] = x4_dot;
 
 }
 

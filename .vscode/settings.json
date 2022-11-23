@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "*.tex": "latex",
+        "cmath": "cpp",
+        "complex": "cpp"
+    }
+}

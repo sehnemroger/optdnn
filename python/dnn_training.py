@@ -50,18 +50,18 @@ test_set = dataset_reader(test_filepaths)
 
 
 ## Creating the DNN
-layers = 14
+layers = 15
 inputs = keras.Input(shape=4)
 mid = keras.layers.Dense(4, activation="linear")(inputs)
 for i in range(layers):
     mid = keras.layers.Dense(10, activation="sigmoid")(mid)
     mid = keras.layers.BatchNormalization()(mid)
-outputs = keras.layers.Dense(2,  activation="linear")(mid)
+outputs = keras.layers.Dense(1,  activation="linear")(mid)
 model = tf.keras.Model(inputs, outputs)
 
 ## Creating custom loss Function
 def custom_loss(y_true, y_pred):
-    alpha = 1
+    alpha = .1
     msle = tf.keras.losses.MeanSquaredLogarithmicError()
     mse = tf.keras.losses.MeanSquaredError()
     return alpha*msle(y_true, y_pred)+(1-alpha)*mse(y_true, y_pred)
@@ -69,8 +69,8 @@ def custom_loss(y_true, y_pred):
 # # preload treined model 
 # model = tf.keras.models.load_model('dnn_trained_segundo.h5',custom_objects={ 'custom_loss': custom_loss})
 ## Compiling the model
-lr_scheduler = keras.callbacks.ReduceLROnPlateau(factor=0.5, patience=2, verbose=1, min_lr=0.000001)
-early_stop = tf.keras.callbacks.EarlyStopping(monitor='loss', patience=5, restore_best_weights=True)
+lr_scheduler = keras.callbacks.ReduceLROnPlateau(factor=0.5, patience=3, verbose=1, min_lr=0.000001)
+early_stop = tf.keras.callbacks.EarlyStopping(monitor='loss', patience=10, restore_best_weights=True)
 model.compile(loss=custom_loss, metrics=['mse'],optimizer=keras.optimizers.Nadam(learning_rate=0.001))
 
 ## Training the dnn
