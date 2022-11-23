@@ -46,8 +46,6 @@ def preprocess(line): # Function that preprocess the line
     y = tf.stack(fields[-1:])
     return x,y
 
-
-
 def dataset_reader(filepaths, repeat=1, n_readers=8,
      shuffle_buffer_size=10000, batch_size=256):
     dataset = tf.data.Dataset.list_files(filepaths)
@@ -83,7 +81,6 @@ test_set = dataset_reader(test_filepaths)
 #         data = np.genfromtxt(valid_filepath, delimiter=',')
 #         x_valid = np.concatenate((x_valid,data[:,0:4]),axis=0)
 #         y_valid = np.concatenate((y_valid,data[:,-1:]),axis=0)
-
 
 ## Model of the system
 def invert_pend(t,x,u,l,I,mb,mc,at,ar):
@@ -170,6 +167,7 @@ class CustomModel(keras.Model):
             else:
                 return_metrics[metric.name] = result
         return return_metrics
+        
 ## Creating the DNN with the functional api
 inputs = keras.Input(shape=4)
 mid = keras.layers.Dense(4, activation="linear")(inputs)
