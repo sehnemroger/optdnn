@@ -78,13 +78,13 @@ adouble integrand_cost(adouble* states, adouble* controls, adouble* parameters,
     double r = User_Data.Optimal_settings.r;
     double q = User_Data.Optimal_settings.q;
 
-    // Defining the matrices needed for the cost function
-    MatrixXd Q = q*eye(4);
-    MatrixXd R = r*eye(1);
-    // This is a MatrixXd object, see the eigen package for details.
-
     // This is the cost function of the optimal control problem
-    return  states.transpose()*Q*states + constrols.transpose()*R*constrols + q*time;
+    return states[0]*q*states[0] + \
+           states[1]*q*states[1] + \
+           states[2]*q*states[2] + \
+           states[3]*q*states[3] + \
+           controls[0]*r*controls[0] + \
+           q*time;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -242,10 +242,15 @@ int main(void)
     Constants_pendulum.translation_friction_coefficient = 0.2;
     Constants_pendulum.rotation_friction_coefficient = 0.2;
 
-    initial_conditions.x1 = 0.1;
-    initial_conditions.x2 = 0.1;
-    initial_conditions.x3 = 0.1;
-    initial_conditions.x4 = 0.02;
+    double x1_init = 0.1;
+    double x2_init = 0.1;
+    double x3_init = 0.1;
+    double x4_init = 0.02;
+
+    initial_conditions.x1 = x1_init;
+    initial_conditions.x2 = x2_init;
+    initial_conditions.x3 = x3_init;
+    initial_conditions.x4 = x4_init;
 
     Optimal_settings.r = 1;
     Optimal_settings.q = 1;
@@ -284,15 +289,15 @@ int main(void)
     problem.phases(1).bounds.lower.controls(0) = u_lower;
     problem.phases(1).bounds.upper.controls(0) = u_upper;
 
-    problem.phases(1).bounds.lower.events(0) = initial_conditions.x1;
-    problem.phases(1).bounds.lower.events(1) = initial_conditions.x2;
-    problem.phases(1).bounds.lower.events(2) = initial_conditions.x3;
-    problem.phases(1).bounds.lower.events(3) = initial_conditions.x4;
+    problem.phases(1).bounds.lower.events(0) = x1_init;
+    problem.phases(1).bounds.lower.events(1) = x2_init;
+    problem.phases(1).bounds.lower.events(2) = x3_init;
+    problem.phases(1).bounds.lower.events(3) = x4_init;
 
-    problem.phases(1).bounds.upper.events(0) = initial_conditions.x1;
-    problem.phases(1).bounds.upper.events(1) = initial_conditions.x2;
-    problem.phases(1).bounds.upper.events(2) = initial_conditions.x3;
-    problem.phases(1).bounds.upper.events(3) = initial_conditions.x4;
+    problem.phases(1).bounds.upper.events(0) = x1_init;
+    problem.phases(1).bounds.upper.events(1) = x2_init;
+    problem.phases(1).bounds.upper.events(2) = x3_init;
+    problem.phases(1).bounds.upper.events(3) = x4_init;
 
     problem.phases(1).bounds.lower.StartTime    = 0.0;
     problem.phases(1).bounds.upper.StartTime    = 0.0;
@@ -321,10 +326,10 @@ int main(void)
 
     MatrixXd x_guess    =  zeros(nstates,nnodes);
 
-    x_guess.row(0)  = initial_conditions.x1*ones(1,nnodes);
-    x_guess.row(1)  = initial_conditions.x2*ones(1,nnodes);
-    x_guess.row(2)  = initial_conditions.x3*ones(1,nnodes);
-    x_guess.row(3)  = initial_conditions.x4*ones(1,nnodes);
+    x_guess.row(0)  = x1_init*ones(1,nnodes);
+    x_guess.row(1)  = x2_init*ones(1,nnodes);
+    x_guess.row(2)  = x3_init*ones(1,nnodes);
+    x_guess.row(3)  = x4_init*ones(1,nnodes);
 
 
     problem.phases(1).guess.controls       = zeros(ncontrols,nnodes);
