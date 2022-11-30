@@ -1,12 +1,21 @@
 ## Pull official tensorflow image compatible with gpu
-FROM tensorflow/tensorflow:latest-gpu
+FROM ubuntu:20.04
+
+ENV DEBIAN_FRONTEND=noninteractive
 
 # set work directory
 WORKDIR /usr/src/optdnn
 
 # # Install dependencies for machine learining
+RUN apt-get update && \
+    apt-get install -y apt-utils && \
+    apt-get -y install python3 && \
+    apt-get -y install python3-pip
+
 RUN python3 -m pip install --no-cache-dir  --upgrade pip && \
     pip install --no-cache-dir -U scikit-learn matplotlib pandas
+
+
 
 # # Install PSOPT dependencies
 RUN apt-get update && \

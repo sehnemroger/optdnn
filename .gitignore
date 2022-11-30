@@ -6,3 +6,7 @@ PSOPT*
 /data_csv
 /__pycache__*
 .vscode/
+/docker/build/*.txt
+/docker/build/*.dat
+/docker/build/*.out
+/docker/build/*.tex

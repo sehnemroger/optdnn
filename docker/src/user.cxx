@@ -35,8 +35,8 @@ typedef struct initial_conditions initial_conditions_;
 
 // Holds the constants for the optimal control formulation.
 struct Optimal_settings {
-    double r;
-    double q;
+    adouble r;
+    adouble q;
 };
 
 typedef struct Optimal_settings Optimal_settings_;
@@ -75,16 +75,11 @@ adouble integrand_cost(adouble* states, adouble* controls, adouble* parameters,
     User_Data_ &User_Data = *( (User_Data_ *) workspace->problem->user_data);
 
     // The constants
-    double r = User_Data.Optimal_settings.r;
-    double q = User_Data.Optimal_settings.q;
+    adouble r = User_Data.Optimal_settings.r;
+    adouble q = User_Data.Optimal_settings.q;
 
     // This is the cost function of the optimal control problem
-    return states[0]*q*states[0] + \
-           states[1]*q*states[1] + \
-           states[2]*q*states[2] + \
-           states[3]*q*states[3] + \
-           controls[0]*r*controls[0] + \
-           q*time;
+    return states[0]*q*states[0] + states[1]*q*states[1] + states[2]*q*states[2] + states[3]*q*states[3] + controls[0]*r*controls[0] + q*time;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -144,6 +139,7 @@ void events(adouble* e, adouble* initial_states, adouble* final_states,
 {
    // Structure that holds initial conditions of the pendulum
    User_Data_ &User_Data = *( (User_Data_ *) workspace->problem->user_data);
+   
    adouble x1_init = User_Data.initial_conditions.x1;
    adouble x2_init = User_Data.initial_conditions.x2;
    adouble x3_init = User_Data.initial_conditions.x3;
@@ -252,8 +248,8 @@ int main(void)
     initial_conditions.x3 = x3_init;
     initial_conditions.x4 = x4_init;
 
-    Optimal_settings.r = 1;
-    Optimal_settings.q = 1;
+    Optimal_settings.r = 1.0;
+    Optimal_settings.q = 1.0;
 
     User_Data.Optimal_settings = Optimal_settings;
     User_Data.initial_conditions = initial_conditions;
@@ -276,34 +272,25 @@ int main(void)
     double u_lower = -5000;
     double u_upper = 5000;
 
-    problem.phases(1).bounds.lower.states(0) = x1_lower;
-    problem.phases(1).bounds.lower.states(1) = x2_lower;
-    problem.phases(1).bounds.lower.states(2) = x3_lower;
-    problem.phases(1).bounds.lower.states(4) = x4_lower;
+    problem.phases(1).bounds.lower.states << x1_lower, x2_lower, x3_lower, x4_lower;
 
-    problem.phases(1).bounds.upper.states(0) = x1_upper;
-    problem.phases(1).bounds.upper.states(1) = x2_upper;
-    problem.phases(1).bounds.upper.states(2) = x3_upper;
-    problem.phases(1).bounds.upper.states(4) = x4_upper;
+    problem.phases(1).bounds.upper.states << x1_upper, x2_upper, x3_upper, x4_upper;
 
-    problem.phases(1).bounds.lower.controls(0) = u_lower;
-    problem.phases(1).bounds.upper.controls(0) = u_upper;
+    problem.phases(1).bounds.lower.controls << u_lower;
+    problem.phases(1).bounds.upper.controls << u_upper;
 
-    problem.phases(1).bounds.lower.events(0) = x1_init;
-    problem.phases(1).bounds.lower.events(1) = x2_init;
-    problem.phases(1).bounds.lower.events(2) = x3_init;
-    problem.phases(1).bounds.lower.events(3) = x4_init;
-
-    problem.phases(1).bounds.upper.events(0) = x1_init;
-    problem.phases(1).bounds.upper.events(1) = x2_init;
-    problem.phases(1).bounds.upper.events(2) = x3_init;
-    problem.phases(1).bounds.upper.events(3) = x4_init;
+    // all events must be zero
+    for (int i = 0; i != 8; i++)
+    {
+        problem.phases(1).bounds.lower.events(i)=0.0;
+        problem.phases(1).bounds.upper.events(i)=0.0;
+    }
 
     problem.phases(1).bounds.lower.StartTime    = 0.0;
     problem.phases(1).bounds.upper.StartTime    = 0.0;
 
-    problem.phases(1).bounds.lower.EndTime      = 30.0;
-    problem.phases(1).bounds.upper.EndTime      = 30.0;
+    problem.phases(1).bounds.lower.EndTime      = 1.0;
+    problem.phases(1).bounds.upper.EndTime      = 300.0;
 
 ////////////////////////////////////////////////////////////////////////////
 ///////////////////  Register problem functions  ///////////////////////////
