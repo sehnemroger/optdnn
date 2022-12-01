@@ -7,6 +7,18 @@
 
 #include "psopt.h"
 
+// Include this to convert floats to strings properly
+#include <iostream>
+#include <sstream>
+
+// See https://stackoverflow.com/questions/2125880/convert-float-to-stdstring-in-c
+template < typename T > std::string to_str (const T& t)
+{
+  std::ostringstream os;
+  os << t;
+  return os.str ();
+}
+
 //////////////////////////////////////////////////////////////////////////
 /////////  Declare an auxiliary structure to hold local constants  ///////
 //////////////////////////////////////////////////////////////////////////
@@ -172,33 +184,33 @@ void linkages( adouble* linkages, adouble* xad, Workspace* workspace)
 int main(void)
 {
 
-////////////////////////////////////////////////////////////////////////////
-///////////////////  Declare key structures ////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
+    ///////////////////  Declare key structures ////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
 
     Alg  algorithm;
     Sol  solution;
     Prob problem;
 
-////////////////////////////////////////////////////////////////////////////
-///////////////////  Register problem name  ////////////////////////////////
-////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
+    ///////////////////  Register problem name  ////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
 
     problem.name        		= "Inverted pendulum problem";
     problem.outfilename                 = "inv_pend_prob.txt";
 
-////////////////////////////////////////////////////////////////////////////
-////////////  Define problem level constants & do level 1 setup ////////////
-////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
+    ////////////  Define problem level constants & do level 1 setup ////////////
+    ////////////////////////////////////////////////////////////////////////////
 
     problem.nphases   			= 1;
     problem.nlinkages                   = 0;
 
     psopt_level1_setup(problem);
 
-/////////////////////////////////////////////////////////////////////////////
-/////////   Define phase related information & do level 2 setup  ////////////
-/////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////
+    /////////   Define phase related information & do level 2 setup  ////////////
+    /////////////////////////////////////////////////////////////////////////////
 
     problem.phases(1).nstates   		= 4;
     problem.phases(1).ncontrols 		= 1;
@@ -208,16 +220,16 @@ int main(void)
 
     psopt_level2_setup(problem, algorithm);
 
-////////////////////////////////////////////////////////////////////////////
-///////////////////  Declare MatrixXd objects to store results //////////////
-////////////////////////////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////////////////////////
+    /////////////////  Declare MatrixXd objects to store results //////////////
+    //////////////////////////////////////////////////////////////////////////
 
     MatrixXd x, u, t;
     MatrixXd lambda, H;
 
-////////////////////////////////////////////////////////////////////////////
-//////////  Declare an instance structs/////////////
-////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
+    ////////////////////     Declare an instance structs      //////////////////
+    ////////////////////////////////////////////////////////////////////////////
 
     initial_conditions_ initial_conditions;
     Constants_pendulum_ Constants_pendulum;
@@ -226,38 +238,9 @@ int main(void)
     
     problem.user_data = (void*) &User_Data;
 
-////////////////////////////////////////////////////////////////////////////
-///////////////////  Initialize CONSTANTS and //////////////////////////////
-///////////////////  declare local variables  //////////////////////////////
-////////////////////////////////////////////////////////////////////////////
-
-    Constants_pendulum.rod_length = 0.3;
-    Constants_pendulum.rod_inertia = 2;
-    Constants_pendulum.rod_mass = 1;
-    Constants_pendulum.cart_mass = 3;
-    Constants_pendulum.translation_friction_coefficient = 0.2;
-    Constants_pendulum.rotation_friction_coefficient = 0.2;
-
-    double x1_init = 0.1;
-    double x2_init = 0.1;
-    double x3_init = 0.1;
-    double x4_init = 0.02;
-
-    initial_conditions.x1 = x1_init;
-    initial_conditions.x2 = x2_init;
-    initial_conditions.x3 = x3_init;
-    initial_conditions.x4 = x4_init;
-
-    Optimal_settings.r = 1.0;
-    Optimal_settings.q = 1.0;
-
-    User_Data.Optimal_settings = Optimal_settings;
-    User_Data.initial_conditions = initial_conditions;
-    User_Data.Constants_pendulum = Constants_pendulum;
-
-////////////////////////////////////////////////////////////////////////////
-///////////////////  Enter problem bounds information //////////////////////
-////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
+    ///////////////////  Enter problem bounds information //////////////////////
+    ////////////////////////////////////////////////////////////////////////////
 
     double x1_lower = -10.0;
     double x2_lower = -100.0;
@@ -289,12 +272,12 @@ int main(void)
     problem.phases(1).bounds.lower.StartTime    = 0.0;
     problem.phases(1).bounds.upper.StartTime    = 0.0;
 
-    problem.phases(1).bounds.lower.EndTime      = 1.0;
+    problem.phases(1).bounds.lower.EndTime      = .0001;
     problem.phases(1).bounds.upper.EndTime      = 300.0;
 
-////////////////////////////////////////////////////////////////////////////
-///////////////////  Register problem functions  ///////////////////////////
-////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
+    ///////////////////  Register problem functions  ///////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
 
 
     problem.integrand_cost 	= &integrand_cost;
@@ -303,30 +286,9 @@ int main(void)
     problem.events 		= &events;
     problem.linkages		= &linkages;
 
-////////////////////////////////////////////////////////////////////////////
-///////////////////  Define & register initial guess ///////////////////////
-////////////////////////////////////////////////////////////////////////////
-
-    int nnodes    			            = problem.phases(1).nodes(0);
-    int ncontrols                       = problem.phases(1).ncontrols;
-    int nstates                         = problem.phases(1).nstates;
-
-    MatrixXd x_guess    =  zeros(nstates,nnodes);
-
-    x_guess.row(0)  = x1_init*ones(1,nnodes);
-    x_guess.row(1)  = x2_init*ones(1,nnodes);
-    x_guess.row(2)  = x3_init*ones(1,nnodes);
-    x_guess.row(3)  = x4_init*ones(1,nnodes);
-
-
-    problem.phases(1).guess.controls       = zeros(ncontrols,nnodes);
-    problem.phases(1).guess.states         = x_guess;
-    problem.phases(1).guess.time           = linspace(0.0,15.0,nnodes);
-
-
-////////////////////////////////////////////////////////////////////////////
-///////////////////  Enter algorithm options  //////////////////////////////
-////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
+    ///////////////////  Enter algorithm options  //////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
 
 
     algorithm.nlp_iter_max                = 1000;
@@ -334,54 +296,138 @@ int main(void)
     algorithm.nlp_method                  = "IPOPT";
     algorithm.scaling                     = "automatic";
     algorithm.derivatives                 = "automatic";
-//    algorithm.mesh_refinement             = "automatic";
-    algorithm.collocation_method          = "trapezoidal";
+    algorithm.mesh_refinement             = "automatic";
+    // algorithm.collocation_method          = "trapezoidal";
+    algorithm.collocation_method          = "Chebyshev";
 //    algorithm.defect_scaling = "jacobian-based";
     algorithm.ode_tolerance               = 1.e-6;
+    algorithm.nsteps_error_integration    = 30;
+
+    ////////////////////////////////////////////////////////////////////////////
+    //////////////////  Define Initial Conditions  /////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
+    // Carefull, the total number of solutions will be in the power of 4.
+    const int n_per_dim = 2;
+    MatrixXd x1is = zeros(1,n_per_dim);
+    MatrixXd x2is = zeros(1,n_per_dim);
+    MatrixXd x3is = zeros(1,n_per_dim);
+    MatrixXd x4is = zeros(1,n_per_dim);
+
+    // Define the minimum and maximum values for the initial conditions
+    double x1_lower_ci = -1, x2_lower_ci = -10, x3_lower_ci = -3.1415, x4_lower_ci = - 5;
+    double x1_upper_ci = 1 , x2_upper_ci = 10 , x3_upper_ci = 3.1415 , x4_upper_ci = 5;
+    x1is = linspace(x1_lower_ci, x1_upper_ci, n_per_dim);
+    x2is = linspace(x2_lower_ci, x2_upper_ci, n_per_dim);
+    x3is = linspace(x3_lower_ci, x3_upper_ci, n_per_dim);
+    x4is = linspace(x4_lower_ci, x4_upper_ci, n_per_dim);
+    
+    // Now compute the solutions for every possible combination of the initial
+    // states defined above.
+    for (int i = 0; i != n_per_dim; i++)
+    {   
+        for (int j = 0; j != n_per_dim; j++)
+        {   
+            for (int k = 0; k != n_per_dim; k++)
+            {   
+                for (int l = 0; l != n_per_dim; l++)
+                {   
+                    ////////////////////////////////////////////////////////////////////////////
+                    ///////////////////  Initialize CONSTANTS and //////////////////////////////
+                    ///////////////////  declare local variables  //////////////////////////////
+                    ////////////////////////////////////////////////////////////////////////////
+
+                    Constants_pendulum.rod_length = 0.3;
+                    Constants_pendulum.rod_inertia = 2;
+                    Constants_pendulum.rod_mass = 1;
+                    Constants_pendulum.cart_mass = 3;
+                    Constants_pendulum.translation_friction_coefficient = 0.2;
+                    Constants_pendulum.rotation_friction_coefficient = 0.2;
+
+                    double x1_init = x1is.coeff(0,i);
+                    double x2_init = x2is.coeff(0,j);
+                    double x3_init = x3is.coeff(0,k);
+                    double x4_init = x4is.coeff(0,l);
+
+                    initial_conditions.x1 = x1_init;
+                    initial_conditions.x2 = x2_init;
+                    initial_conditions.x3 = x3_init;
+                    initial_conditions.x4 = x4_init;
+
+                    Optimal_settings.r = 1.0;
+                    Optimal_settings.q = 1.0;
+
+                    User_Data.Optimal_settings = Optimal_settings;
+                    User_Data.initial_conditions = initial_conditions;
+                    User_Data.Constants_pendulum = Constants_pendulum;
+                    
+                    ////////////////////////////////////////////////////////////////////////////
+                    ///////////////////  Define & register initial guess ///////////////////////
+                    ////////////////////////////////////////////////////////////////////////////
+
+                    int nnodes    			            = problem.phases(1).nodes(0);
+                    int ncontrols                       = problem.phases(1).ncontrols;
+                    int nstates                         = problem.phases(1).nstates;
+
+                    MatrixXd x_guess    =  zeros(nstates,nnodes);
+
+                    x_guess.row(0) = linspace(x1_init, 0, nnodes);
+                    x_guess.row(1) = linspace(x2_init, 0, nnodes);
+                    x_guess.row(2) = linspace(x3_init, 0, nnodes);
+                    x_guess.row(3) = linspace(x4_init, 0, nnodes);
+                
 
 
+                    problem.phases(1).guess.controls       = zeros(ncontrols,nnodes);
+                    problem.phases(1).guess.states         = x_guess;
+                    problem.phases(1).guess.time           = linspace(0.0,1.0,nnodes);
+                    ////////////////////////////////////////////////////////////////////////////
+                    ///////////////////  Now call PSOPT to solve the problem   /////////////////
+                    ////////////////////////////////////////////////////////////////////////////
 
-////////////////////////////////////////////////////////////////////////////
-///////////////////  Now call PSOPT to solve the problem   /////////////////
-////////////////////////////////////////////////////////////////////////////
+                    psopt(solution, problem, algorithm);
 
-    psopt(solution, problem, algorithm);
-
-////////////////////////////////////////////////////////////////////////////
-///////////  Extract relevant variables from solution structure   //////////
-////////////////////////////////////////////////////////////////////////////
-
-
-    x      = solution.get_states_in_phase(1);
-    u      = solution.get_controls_in_phase(1);
-    t      = solution.get_time_in_phase(1);
-    lambda = solution.get_dual_costates_in_phase(1);
-    H      = solution.get_dual_hamiltonian_in_phase(1);
+                    ////////////////////////////////////////////////////////////////////////////
+                    ///////////  Extract relevant variables from solution structure   //////////
+                    ////////////////////////////////////////////////////////////////////////////
 
 
-////////////////////////////////////////////////////////////////////////////
-///////////  Save solution data to files if desired ////////////////////////
-////////////////////////////////////////////////////////////////////////////
+                    x      = solution.get_states_in_phase(1);
+                    u      = solution.get_controls_in_phase(1);
+                    t      = solution.get_time_in_phase(1);
+                    // lambda = solution.get_dual_costates_in_phase(1);
+                    // H      = solution.get_dual_hamiltonian_in_phase(1);
 
-    Save(x, "x.dat");
-    Save(u,"u.dat");
-    Save(t,"t.dat");
-    Save(lambda,"lambda.dat");
-    Save(H,"H.dat");
+                    ////////////////////////////////////////////////////////////////////////////
+                    /////////  Save solution with the name of the initial conditions    ////////
+                    ////////////////////////////////////////////////////////////////////////////
 
-////////////////////////////////////////////////////////////////////////////
-///////////  Plot some results if desired (requires gnuplot) ///////////////
-////////////////////////////////////////////////////////////////////////////
+                    // Define the output matrix to save to file,
+                    // First collumn is time, second to fifth are the states and the sixth 
+                    // is the control. 
+                    MatrixXd out;
 
-//    plot(t,x,problem.name+": states", "time (s)", "states","x y v");
+                    // The data comes from the solver in the line form (as opposed to the
+                    // collumn form)
 
-//     plot(t,u,problem.name+": controls","time (s)", "controls", "u_1 u_2");
+                    out.resize(6, t.cols()); // get in the correct shape
+                    out << t, x, u; // pass in the data
 
-//     plot(t,x,problem.name+": states", "time (s)", "states","x y v",
-//                              "pdf", "brymr_states.pdf");
+                    // Create name
+                    std::string x_name = "q_" + to_str(1) + "r_" + to_str(1);
+                    x_name += "x1i_" + to_str(x1_init);
+                    x_name += "x2i_" + to_str(x2_init);
+                    x_name += "x3i_" + to_str(x3_init);
+                    x_name += "x4i_" + to_str(x4_init) + ".dat";
 
-//     plot(t,u,problem.name+": controls","time (s)", "controls", "u_1 u_2",
-//                              "pdf", "brymr_controls.pdf");
+                    ////////////////////////////////////////////////////////////////////////////
+                    ///////////  Save solution data to files if desired ////////////////////////
+                    ////////////////////////////////////////////////////////////////////////////
+
+                    Save(out.transpose(), x_name.c_str());
+                }
+            }
+        }
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////
