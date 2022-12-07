@@ -169,6 +169,36 @@ void events(adouble* e, adouble* initial_states, adouble* final_states,
         e[ 2 ] = final_states[2];
         e[ 3 ] = final_states[3];
     }
+    // if ( iphase == 1 ) {
+    //     e[ 0 ] = x1_init - initial_states[0];
+    //     e[ 1 ] = x2_init - initial_states[1];
+    //     e[ 2 ] = x3_init - initial_states[2];
+    //     e[ 3 ] = x4_init - initial_states[3];
+    //     e[ 4 ] = final_states[0] - x1_init*2/3;
+    //     e[ 5 ] = final_states[1] - x2_init*2/3;
+    //     e[ 6 ] = final_states[2] - x3_init*2/3;
+    //     e[ 7 ] = final_states[3] - x4_init*2/3;
+    // }
+    // else if ( iphase == 2) {
+    //     e[ 0 ] = initial_states[0] - x1_init*2/3;
+    //     e[ 1 ] = initial_states[1] - x2_init*2/3;
+    //     e[ 2 ] = initial_states[2] - x3_init*2/3;
+    //     e[ 3 ] = initial_states[3] - x4_init*2/3;
+    //     e[ 4 ] = final_states[0] -  x1_init*1/3;
+    //     e[ 5 ] = final_states[1] -  x2_init*1/3;
+    //     e[ 6 ] = final_states[2] -  x3_init*1/3;
+    //     e[ 7 ] = final_states[3] -  x4_init*1/3;
+    // }
+    // else if ( iphase == 3) {
+    //     e[ 0 ] = initial_states[0] - x1_init*1/3;
+    //     e[ 1 ] = initial_states[1] - x2_init*1/3;
+    //     e[ 2 ] = initial_states[2] - x3_init*1/3;
+    //     e[ 3 ] = initial_states[3] - x4_init*1/3;
+    //     e[ 4 ] = final_states[0];
+    //     e[ 5 ] = final_states[1];
+    //     e[ 6 ] = final_states[2];
+    //     e[ 7 ] = final_states[3];
+    // }
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -249,8 +279,6 @@ int main(void)
 
     psopt_level2_setup(problem, algorithm);
 
-    algorithm.print_level = 0;
-
     ////////////////////////////////////////////////////////////////////////////
     ////////////////////     Declare an instance structs      //////////////////
     ////////////////////////////////////////////////////////////////////////////
@@ -273,8 +301,23 @@ int main(void)
     Constants_pendulum.translation_friction_coefficient = 0.2;
     Constants_pendulum.rotation_friction_coefficient = 0.2;
 
+    double x1_init = -1.0;
+    double x2_init = 1.0;
+    double x3_init = 3.1415;
+    double x4_init = -1.0;
+
+    initial_conditions.x1 = x1_init;
+    initial_conditions.x2 = x2_init;
+    initial_conditions.x3 = x3_init;
+    initial_conditions.x4 = x4_init;
+
     Optimal_settings.r = 1.0;
     Optimal_settings.q = 1.0;
+
+    User_Data.Optimal_settings = Optimal_settings;
+    User_Data.initial_conditions = initial_conditions;
+    User_Data.Constants_pendulum = Constants_pendulum;
+
 
     ////////////////////////////////////////////////////////////////////////////
     ///////////////////  Enter problem bounds information //////////////////////
@@ -354,16 +397,6 @@ int main(void)
     problem.linkages		= &linkages;
 
     ////////////////////////////////////////////////////////////////////////////
-    ///////////////////  Initialize variables     //////////////////////////////
-    ////////////////////////////////////////////////////////////////////////////
-
-    MatrixXd x, u, t;
-    MatrixXd x_ph1, u_ph1, t_ph1;
-    MatrixXd x_ph2, u_ph2, t_ph2;
-    MatrixXd x_ph3, u_ph3, t_ph3;
-    MatrixXd x_ph4, u_ph4, t_ph4;
-
-    ////////////////////////////////////////////////////////////////////////////
     ///////////////////  Enter algorithm options  //////////////////////////////
     ////////////////////////////////////////////////////////////////////////////
 
@@ -386,225 +419,121 @@ int main(void)
     // algorithm.mr_max_iterations           = 20;
     // algorithm.jac_sparsity_ratio          = 1;
     // algorithm.hess_sparsity_ratio         = 1;
-
+    
     ////////////////////////////////////////////////////////////////////////////
-    //////////////////  Define Initial Conditions  /////////////////////////////
+    ///////////////////  Define & register initial guess ///////////////////////
     ////////////////////////////////////////////////////////////////////////////
-    // Carefull, the total number of solutions will be in the power of 4.
-    const int n_per_dim = 2;
-    MatrixXd x1is = zeros(1,n_per_dim);
-    MatrixXd x2is = zeros(1,n_per_dim);
-    MatrixXd x3is = zeros(1,n_per_dim);
-    MatrixXd x4is = zeros(1,n_per_dim);
 
-    // Define the minimum and maximum values for the initial conditions
-    double x1_lower_ci = -1, x2_lower_ci = -1, x3_lower_ci = -3.1415, x4_lower_ci = - 1;
-    double x1_upper_ci = 1 , x2_upper_ci = 1 , x3_upper_ci = 3.1415 , x4_upper_ci = 1;
+    int nnodes    			            = problem.phases(1).nodes(0);
+    int ncontrols                       = problem.phases(1).ncontrols;
+    int nstates                         = problem.phases(1).nstates;
 
-    x1is = linspace(x1_lower_ci, x1_upper_ci, n_per_dim);
-    x2is = linspace(x2_lower_ci, x2_upper_ci, n_per_dim);
-    x3is = linspace(x3_lower_ci, x3_upper_ci, n_per_dim);
-    x4is = linspace(x4_lower_ci, x4_upper_ci, n_per_dim);
-
-    // Now compute the solutions for every possible combination of the initial
-    // states defined above.
-
-    int inc_j = -1;
-    int j_end = 0;
-    int j_ini = n_per_dim - 1;
-    int j_ini_buff;
-
-    int inc_k = -1;
-    int k_end = 0;
-    int k_ini = n_per_dim - 1;
-    int k_ini_buff;
-
-    int inc_l = -1;
-    int l_end = 0;
-    int l_ini = n_per_dim - 1;
-    int l_ini_buff;
-
-    int count = 0; // Counter for the problem.
-
-    for (int i = 0; i < n_per_dim; i++)
+    for (int iphase = 1; iphase != 5; iphase++)
     {
-        inc_j *= -1;
-        j_ini_buff = j_ini;
-        j_ini = j_end;
-        j_end = j_ini_buff;
-        for (int j = j_ini; j != j_end + inc_j; j += inc_j)
-        {
-            inc_k *= -1;
-            k_ini_buff = k_ini;
-            k_ini = k_end;
-            k_end = k_ini_buff;
-            for (int k = k_ini; k != k_end + inc_k; k += inc_k)
-            {   
-                inc_l *= -1;
-                l_ini_buff = l_ini;
-                l_ini = l_end;
-                l_end = l_ini_buff;
-                for (int l = l_ini; l != l_end + inc_l; l += inc_l)
-                {
-                    ////////////////////////////////////////////////////////////////////////////
-                    ///////////////////               CIs                ///////////////////////
-                    ////////////////////////////////////////////////////////////////////////////
-                    
-                    cout << i << j << k << l << endl;
-
-                    double x1_init = x1is.coeff(0,i);
-                    double x2_init = x2is.coeff(0,j);
-                    double x3_init = x3is.coeff(0,k);
-                    double x4_init = x4is.coeff(0,l);
-
-                    cout << x1_init << x2_init << x3_init << x4_init << endl;
-
-                    initial_conditions.x1 = x1_init;
-                    initial_conditions.x2 = x2_init;
-                    initial_conditions.x3 = x3_init;
-                    initial_conditions.x4 = x4_init;
-
-                    User_Data.Optimal_settings = Optimal_settings;
-                    User_Data.initial_conditions = initial_conditions;
-                    User_Data.Constants_pendulum = Constants_pendulum;
-
-                    ////////////////////////////////////////////////////////////////////////////
-                    ///////////////////  Define & register initial guess ///////////////////////
-                    ////////////////////////////////////////////////////////////////////////////
-
-                    if (count == 0)
-                    {
-
-                        int nnodes    			            = problem.phases(1).nodes(0);
-                        int ncontrols                       = problem.phases(1).ncontrols;
-                        int nstates                         = problem.phases(1).nstates;
-
-                        for (int iphase = 1; iphase != 5; iphase++)
-                        {
-                            problem.phases(iphase).guess.states = zeros(nstates,nnodes);
-                            problem.phases(iphase).guess.controls = zeros(ncontrols,nnodes);
-                        }
-
-                        problem.phases(1).guess.states.row(0) = linspace(x1_init, x1_init*3/4, nnodes);
-                        problem.phases(1).guess.states.row(1) = linspace(x2_init, x2_init*3/4, nnodes);
-                        problem.phases(1).guess.states.row(2) = linspace(x3_init, x3_init*3/4, nnodes);
-                        problem.phases(1).guess.states.row(3) = linspace(x4_init, x4_init*3/4, nnodes);
-
-                        problem.phases(2).guess.states.row(0) = linspace(x1_init*3/4, x1_init*2/4, nnodes);
-                        problem.phases(2).guess.states.row(1) = linspace(x2_init*3/4, x2_init*2/4, nnodes);
-                        problem.phases(2).guess.states.row(2) = linspace(x3_init*3/4, x3_init*2/4, nnodes);
-                        problem.phases(2).guess.states.row(3) = linspace(x4_init*3/4, x4_init*2/4, nnodes);
-
-                        problem.phases(3).guess.states.row(0) = linspace(x1_init*2/4, x1_init*1/4, nnodes);
-                        problem.phases(3).guess.states.row(1) = linspace(x2_init*2/4, x2_init*1/4, nnodes);
-                        problem.phases(3).guess.states.row(2) = linspace(x3_init*2/4, x3_init*1/4, nnodes);
-                        problem.phases(3).guess.states.row(3) = linspace(x4_init*2/4, x4_init*1/4, nnodes);
-
-                        problem.phases(4).guess.states.row(0) = linspace(x1_init*1/4, 0, nnodes);
-                        problem.phases(4).guess.states.row(1) = linspace(x2_init*1/4, 0, nnodes);
-                        problem.phases(4).guess.states.row(2) = linspace(x3_init*1/4, 0, nnodes);
-                        problem.phases(4).guess.states.row(3) = linspace(x4_init*1/4, 0, nnodes);
-
-                        double tf = end_time;
-                        // double tf = 10;
-
-                        problem.phases(1).guess.time = linspace(0, tf/4, nnodes);
-                        problem.phases(2).guess.time = linspace(tf/4, tf*2/4, nnodes);
-                        problem.phases(3).guess.time = linspace(tf*2/4, tf*3/4, nnodes);
-                        problem.phases(4).guess.time = linspace(tf*3/4, tf, nnodes);
-                    }
-                    else
-                    {
-                        problem.phases(1).guess.controls       = u_ph1;
-                        problem.phases(1).guess.states         = x_ph1;
-                        problem.phases(1).guess.time           = t_ph1;
-                        problem.phases(1).nodes = (RowVectorXi(1) << 25).finished();
-
-                        problem.phases(2).guess.controls       = u_ph2;
-                        problem.phases(2).guess.states         = x_ph2;
-                        problem.phases(2).guess.time           = t_ph2;
-                        problem.phases(2).nodes = (RowVectorXi(1) << 25).finished();
-
-                        problem.phases(3).guess.controls       = u_ph3;
-                        problem.phases(3).guess.states         = x_ph3;
-                        problem.phases(3).guess.time           = t_ph3;
-                        problem.phases(3).nodes = (RowVectorXi(1) << 25).finished();
-
-                        problem.phases(4).guess.controls       = u_ph4;
-                        problem.phases(4).guess.states         = x_ph4;
-                        problem.phases(4).guess.time           = t_ph4;
-                        problem.phases(4).nodes = (RowVectorXi(1) << 25).finished();
-                    }
-
-                    ////////////////////////////////////////////////////////////////////////////
-                    ///////////////////  Now call PSOPT to solve the problem   /////////////////
-                    ////////////////////////////////////////////////////////////////////////////
-
-                    psopt(solution, problem, algorithm);
-
-                    count ++ ;
-
-                    ////////////////////////////////////////////////////////////////////////////
-                    ///////////  Extract relevant variables from solution structure   //////////
-                    ////////////////////////////////////////////////////////////////////////////
-
-                    x_ph1      = solution.get_states_in_phase(1);
-                    u_ph1      = solution.get_controls_in_phase(1);
-                    t_ph1      = solution.get_time_in_phase(1);
-                    
-                    x_ph2      = solution.get_states_in_phase(2);
-                    u_ph2      = solution.get_controls_in_phase(2);
-                    t_ph2      = solution.get_time_in_phase(2);
-
-                    x_ph3      = solution.get_states_in_phase(3);
-                    u_ph3      = solution.get_controls_in_phase(3);
-                    t_ph3      = solution.get_time_in_phase(3);
-
-                    x_ph4      = solution.get_states_in_phase(4);
-                    u_ph4      = solution.get_controls_in_phase(4);
-                    t_ph4      = solution.get_time_in_phase(4);
-
-                    x.resize(4, length(t_ph1) + length(t_ph2) + length(t_ph3) + length(t_ph4));
-                    u.resize(1, length(t_ph1) + length(t_ph2) + length(t_ph3) + length(t_ph4));
-                    t.resize(1, length(t_ph1) + length(t_ph2) + length(t_ph3) + length(t_ph4));
-
-                    x << x_ph1, x_ph2, x_ph3,  x_ph4;
-                    u << u_ph1, u_ph2, u_ph3,  u_ph4;
-                    t << t_ph1, t_ph2, t_ph3,  t_ph4;
-                    // lambda = solution.get_dual_costates_in_phase(1);
-                    // H      = solution.get_dual_hamiltonian_in_phase(1);
-
-                    ////////////////////////////////////////////////////////////////////////////
-                    /////////  Save solution with the name of the initial conditions    ////////
-                    ////////////////////////////////////////////////////////////////////////////
-
-                    // Define the output matrix to save to file,
-                    // First collumn is time, second to fifth are the states and the sixth 
-                    // is the control. 
-                    MatrixXd out;
-
-                    // The data comes from the solver in the line form (as opposed to the
-                    // collumn form)
-
-                    out.resize(6, t.cols()); // get in the correct shape
-                    out << t, x, u; // pass in the data
-
-                    // Create name
-                    std::string x_name = "q_" + to_str(1) + "r_" + to_str(1);
-                    x_name += "x1i_" + to_str(x1_init);
-                    x_name += "x2i_" + to_str(x2_init);
-                    x_name += "x3i_" + to_str(x3_init);
-                    x_name += "x4i_" + to_str(x4_init) + ".dat";
-
-                    ////////////////////////////////////////////////////////////////////////////
-                    ///////////  Save solution data to files if desired ////////////////////////
-                    ////////////////////////////////////////////////////////////////////////////
-
-                    Save(out.transpose(), x_name.c_str());
-                }
-            }
-        }
+        problem.phases(iphase).guess.states = zeros(nstates,nnodes);
+        problem.phases(iphase).guess.controls = zeros(ncontrols,nnodes);
     }
+
+    problem.phases(1).guess.states.row(0) = linspace(x1_init, x1_init*3/4, nnodes);
+    problem.phases(1).guess.states.row(1) = linspace(x2_init, x2_init*3/4, nnodes);
+    problem.phases(1).guess.states.row(2) = linspace(x3_init, x3_init*3/4, nnodes);
+    problem.phases(1).guess.states.row(3) = linspace(x4_init, x4_init*3/4, nnodes);
+
+    problem.phases(2).guess.states.row(0) = linspace(x1_init*3/4, x1_init*2/4, nnodes);
+    problem.phases(2).guess.states.row(1) = linspace(x2_init*3/4, x2_init*2/4, nnodes);
+    problem.phases(2).guess.states.row(2) = linspace(x3_init*3/4, x3_init*2/4, nnodes);
+    problem.phases(2).guess.states.row(3) = linspace(x4_init*3/4, x4_init*2/4, nnodes);
+
+    problem.phases(3).guess.states.row(0) = linspace(x1_init*2/4, x1_init*1/4, nnodes);
+    problem.phases(3).guess.states.row(1) = linspace(x2_init*2/4, x2_init*1/4, nnodes);
+    problem.phases(3).guess.states.row(2) = linspace(x3_init*2/4, x3_init*1/4, nnodes);
+    problem.phases(3).guess.states.row(3) = linspace(x4_init*2/4, x4_init*1/4, nnodes);
+
+    problem.phases(4).guess.states.row(0) = linspace(x1_init*1/4, 0, nnodes);
+    problem.phases(4).guess.states.row(1) = linspace(x2_init*1/4, 0, nnodes);
+    problem.phases(4).guess.states.row(2) = linspace(x3_init*1/4, 0, nnodes);
+    problem.phases(4).guess.states.row(3) = linspace(x4_init*1/4, 0, nnodes);
+
+    double tf = end_time;
+    // double tf = 10;
+
+    problem.phases(1).guess.time = linspace(0, tf/4, nnodes);
+    problem.phases(2).guess.time = linspace(tf/4, tf*2/4, nnodes);
+    problem.phases(3).guess.time = linspace(tf*2/4, tf*3/4, nnodes);
+    problem.phases(4).guess.time = linspace(tf*3/4, tf, nnodes);
+
+    
+
+    ////////////////////////////////////////////////////////////////////////////
+    ///////////////////  Now call PSOPT to solve the problem   /////////////////
+    ////////////////////////////////////////////////////////////////////////////
+
+    psopt(solution, problem, algorithm);
+
+    ////////////////////////////////////////////////////////////////////////////
+    ///////////  Extract relevant variables from solution structure   //////////
+    ////////////////////////////////////////////////////////////////////////////
+
+    MatrixXd x, u, t;
+    MatrixXd x_ph1, u_ph1, t_ph1;
+    MatrixXd x_ph2, u_ph2, t_ph2;
+    MatrixXd x_ph3, u_ph3, t_ph3;
+    MatrixXd x_ph4, u_ph4, t_ph4;
+
+
+    x_ph1      = solution.get_states_in_phase(1);
+    u_ph1      = solution.get_controls_in_phase(1);
+    t_ph1      = solution.get_time_in_phase(1);
+    
+    x_ph2      = solution.get_states_in_phase(2);
+    u_ph2      = solution.get_controls_in_phase(2);
+    t_ph2      = solution.get_time_in_phase(2);
+
+    x_ph3      = solution.get_states_in_phase(3);
+    u_ph3      = solution.get_controls_in_phase(3);
+    t_ph3      = solution.get_time_in_phase(3);
+
+    x_ph4      = solution.get_states_in_phase(4);
+    u_ph4      = solution.get_controls_in_phase(4);
+    t_ph4      = solution.get_time_in_phase(4);
+
+    x.resize(4, length(t_ph1) + length(t_ph2) + length(t_ph3) + length(t_ph4));
+    u.resize(1, length(t_ph1) + length(t_ph2) + length(t_ph3) + length(t_ph4));
+    t.resize(1, length(t_ph1) + length(t_ph2) + length(t_ph3) + length(t_ph4));
+
+    x << x_ph1, x_ph2, x_ph3,  x_ph4;
+    u << u_ph1, u_ph2, u_ph3,  u_ph4;
+    t << t_ph1, t_ph2, t_ph3,  t_ph4;
+    // lambda = solution.get_dual_costates_in_phase(1);
+    // H      = solution.get_dual_hamiltonian_in_phase(1);
+
+    ////////////////////////////////////////////////////////////////////////////
+    /////////  Save solution with the name of the initial conditions    ////////
+    ////////////////////////////////////////////////////////////////////////////
+
+    // Define the output matrix to save to file,
+    // First collumn is time, second to fifth are the states and the sixth 
+    // is the control. 
+    MatrixXd out;
+
+    // The data comes from the solver in the line form (as opposed to the
+    // collumn form)
+
+    out.resize(6, t.cols()); // get in the correct shape
+    out << t, x, u; // pass in the data
+
+    // Create name
+    std::string x_name = "q_" + to_str(1) + "r_" + to_str(1);
+    x_name += "x1i_" + to_str(x1_init);
+    x_name += "x2i_" + to_str(x2_init);
+    x_name += "x3i_" + to_str(x3_init);
+    x_name += "x4i_" + to_str(x4_init) + ".dat";
+
+    ////////////////////////////////////////////////////////////////////////////
+    ///////////  Save solution data to files if desired ////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
+
+    Save(out.transpose(), x_name.c_str());
 }
 
 ////////////////////////////////////////////////////////////////////////////
