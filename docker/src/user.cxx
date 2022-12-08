@@ -52,6 +52,7 @@ struct Optimal_settings
 {
     adouble r;
     adouble q;
+    int phases;
 };
 
 typedef struct Optimal_settings Optimal_settings_;
@@ -159,6 +160,7 @@ void events(adouble *e, adouble *initial_states, adouble *final_states,
     adouble x2_init = User_Data.initial_conditions.x2;
     adouble x3_init = User_Data.initial_conditions.x3;
     adouble x4_init = User_Data.initial_conditions.x4;
+    int phases = User_Data.Optimal_settings.phases;
 
     if (iphase == 1)
     {
@@ -167,7 +169,7 @@ void events(adouble *e, adouble *initial_states, adouble *final_states,
         e[2] = x3_init - initial_states[2];
         e[3] = x4_init - initial_states[3];
     }
-    else if (iphase == 4)
+    else if (iphase == phases)
     {
         e[0] = final_states[0];
         e[1] = final_states[1];
@@ -229,23 +231,37 @@ void events(adouble *e, adouble *initial_states, adouble *final_states,
 
 void linkages(adouble *linkages, adouble *xad, Workspace *workspace)
 {
+
+    // Structure that holds initial conditions of the pendulum
+    User_Data_ &User_Data = *((User_Data_ *)workspace->problem->user_data);
+
     int index = 0;
-    adouble tf_p1, tf_p2, tf_p3, tf_p4; // final time of the phases
+    adouble tf_p, tf; // final time of the phases
+    int phases = User_Data.Optimal_settings.phases;
 
-    auto_link_2(linkages, &index, xad, 1, 2, workspace);
-    auto_link_2(linkages, &index, xad, 2, 3, workspace);
-    auto_link_2(linkages, &index, xad, 3, 4, workspace);
+    for (int iphase = 1; iphase != phases; iphase++)
+    {
+        auto_link_2(linkages, &index, xad, iphase, iphase + 1, workspace);
+    }
 
-    tf_p1 = get_final_time(xad, 1, workspace);
-    tf_p2 = get_final_time(xad, 2, workspace);
-    tf_p3 = get_final_time(xad, 3, workspace);
-    tf_p4 = get_final_time(xad, 4, workspace);
+    // auto_link_2(linkages, &index, xad, 1, 2, workspace);
+    // auto_link_2(linkages, &index, xad, 2, 3, workspace);
+    // auto_link_2(linkages, &index, xad, 3, 4, workspace);
 
-    linkages[index] = tf_p1 - tf_p4 / 4; // makes the final time of the first phase 1/4 of the final time
-    index++;
-    linkages[index] = tf_p2 - tf_p4 * 2 / 4; // makes the final time of the second phase 2/4 of the final time
-    index++;
-    linkages[index] = tf_p3 - tf_p4 * 3 / 4; // makes the final time 3/4 of the final time
+    tf = get_final_time(xad, phases, workspace); // final time
+
+    for (int iphase = 1; iphase != phases; iphase++)
+    {
+        tf_p = get_final_time(xad, iphase, workspace);
+        linkages[index] = tf_p - tf * iphase / phases;
+        index++;
+    }
+
+    // linkages[index] = tf_p1 - tf_p4 / 4; // makes the final time of the first phase 1/4 of the final time
+    // index++;
+    // linkages[index] = tf_p2 - tf_p4 * 2 / 4; // makes the final time of the second phase 2/4 of the final time
+    // index++;
+    // linkages[index] = tf_p3 - tf_p4 * 3 / 4; // makes the final time 3/4 of the final time
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -274,8 +290,13 @@ int main(void)
     ////////////  Define problem level constants & do level 1 setup ////////////
     ////////////////////////////////////////////////////////////////////////////
 
-    problem.nphases = 4;
-    problem.nlinkages = 21;
+    int phases = 6;
+    int nstates = 4;
+    int ncontrols = 1;
+
+    problem.nphases = phases;
+    // problem.nlinkages = 21;
+    problem.nlinkages = (nstates + ncontrols + 1) * (phases - 1) + phases - 1;
 
     psopt_level1_setup(problem);
 
@@ -283,21 +304,21 @@ int main(void)
     /////////   Define phase related information & do level 2 setup  ////////////
     /////////////////////////////////////////////////////////////////////////////
 
-    for (int j = 1; j != 5; j++)
+    int nodes = 15;
+
+    for (int iphases = 1; iphases != phases + 1; iphases++)
     {
-        problem.phases(j).nstates = 4;
-        problem.phases(j).ncontrols = 1;
-        problem.phases(j).npath = 0;
-        // problem.phases(j).nodes             = (RowVectorXi(2) << 15, 18).finished(); // numeros de nós em sequencia
-        problem.phases(j).nodes = (RowVectorXi(3) << 15, 20, 25).finished(); // numeros de nós em sequencia
-        // problem.phases(j).nodes             << 15;
-        // problem.phases(j).nevents   		= 8;
+        problem.phases(iphases).nstates = nstates;
+        problem.phases(iphases).ncontrols = ncontrols;
+        problem.phases(iphases).npath = 0;
+        // problem.phases(iphases).nodes             = (RowVectorXi(2) << 15, 18).finished(); // numeros de nós em sequencia
+        // problem.phases(iphases).nodes = (RowVectorXi(3) << 15, 20, 25).finished(); // numeros de nós em sequencia
+        problem.phases(iphases).nodes << nodes;
+        problem.phases(iphases).nevents = 0;
     }
 
     problem.phases(1).nevents = 4;
-    problem.phases(2).nevents = 0;
-    problem.phases(3).nevents = 0;
-    problem.phases(4).nevents = 8;
+    problem.phases(phases).nevents = 8;
 
     psopt_level2_setup(problem, algorithm);
 
@@ -335,6 +356,7 @@ int main(void)
 
     Optimal_settings.r = 1.0;
     Optimal_settings.q = 1.0;
+    Optimal_settings.phases = phases;
 
     User_Data.Optimal_settings = Optimal_settings;
     User_Data.initial_conditions = initial_conditions;
@@ -357,7 +379,7 @@ int main(void)
     double u_lower = -1000;
     double u_upper = 1000;
 
-    for (int iphase = 1; iphase != 5; iphase++)
+    for (int iphase = 1; iphase != phases + 1; iphase++)
     {
         problem.phases(iphase).bounds.lower.states << x1_lower, x2_lower, x3_lower, x4_lower;
         problem.phases(iphase).bounds.upper.states << x1_upper, x2_upper, x3_upper, x4_upper;
@@ -374,8 +396,8 @@ int main(void)
     // all events must be zero
     for (int i = 0; i != 8; i++)
     {
-        problem.phases(4).bounds.lower.events(i) = 0.0;
-        problem.phases(4).bounds.upper.events(i) = 0.0;
+        problem.phases(phases).bounds.lower.events(i) = 0.0;
+        problem.phases(phases).bounds.upper.events(i) = 0.0;
     }
 
     double start_time = 0.0, end_time = 30.0;
@@ -385,20 +407,18 @@ int main(void)
     problem.phases(1).bounds.lower.EndTime = start_time;
     problem.phases(1).bounds.upper.EndTime = end_time;
 
-    problem.phases(2).bounds.lower.StartTime = start_time;
-    problem.phases(2).bounds.upper.StartTime = end_time;
-    problem.phases(2).bounds.lower.EndTime = start_time;
-    problem.phases(2).bounds.upper.EndTime = end_time;
+    for (int iphase = 2; iphase != phases; iphase++)
+    {
+        problem.phases(iphase).bounds.lower.StartTime = start_time;
+        problem.phases(iphase).bounds.upper.StartTime = end_time;
+        problem.phases(iphase).bounds.lower.EndTime = start_time;
+        problem.phases(iphase).bounds.upper.EndTime = end_time;
+    }
 
-    problem.phases(3).bounds.lower.StartTime = start_time;
-    problem.phases(3).bounds.upper.StartTime = end_time;
-    problem.phases(3).bounds.lower.EndTime = start_time;
-    problem.phases(3).bounds.upper.EndTime = end_time;
-
-    problem.phases(4).bounds.lower.StartTime = start_time;
-    problem.phases(4).bounds.upper.StartTime = end_time;
-    problem.phases(4).bounds.lower.EndTime = start_time;
-    problem.phases(4).bounds.upper.EndTime = end_time;
+    problem.phases(phases).bounds.lower.StartTime = start_time;
+    problem.phases(phases).bounds.upper.StartTime = end_time;
+    problem.phases(phases).bounds.lower.EndTime = start_time;
+    problem.phases(phases).bounds.upper.EndTime = end_time;
 
     // problem.bounds.lower.times.resize(1,4);
     // problem.bounds.upper.times.resize(1,4);
@@ -424,18 +444,18 @@ int main(void)
     algorithm.nlp_method = "IPOPT";
     algorithm.scaling = "automatic";
     algorithm.derivatives = "automatic";
-    // algorithm.mesh_refinement             = "automatic";
+    // algorithm.mesh_refinement = "automatic";
     // algorithm.collocation_method          = "Hermite-Simpson";
     // algorithm.collocation_method          = "Chebyshev";
     // algorithm.defect_scaling = "jacobian-based";
-    algorithm.nsteps_error_integration    = 30;
-    // algorithm.mr_max_increment_factor     = 0.8;
+    // algorithm.nsteps_error_integration = 30;
+    // algorithm.mr_max_increment_factor = 0.8;
     // algorithm.hessian                     = "exact";
     algorithm.nlp_tolerance = 1e-6;
     algorithm.ode_tolerance = 1.e-6;
     // algorithm.mr_min_extrapolation_points = 4;
     // algorithm.mr_initial_increment        = 20;
-    // algorithm.mr_max_iterations           = 20;
+    // algorithm.mr_max_iterations = 20;
     // algorithm.jac_sparsity_ratio          = 1;
     // algorithm.hess_sparsity_ratio         = 1;
 
@@ -444,42 +464,54 @@ int main(void)
     ////////////////////////////////////////////////////////////////////////////
 
     int nnodes = problem.phases(1).nodes(0);
-    int ncontrols = problem.phases(1).ncontrols;
-    int nstates = problem.phases(1).nstates;
+    // int ncontrols = problem.phases(1).ncontrols;
+    // int nstates = problem.phases(1).nstates;
 
-    for (int iphase = 1; iphase != 5; iphase++)
+    for (int iphase = 1; iphase != phases + 1; iphase++)
     {
         problem.phases(iphase).guess.states = zeros(nstates, nnodes);
         problem.phases(iphase).guess.controls = zeros(ncontrols, nnodes);
+
+        float factor_init = (phases - iphase + 1) / phases;
+        float factor_final = (phases - iphase) / phases;
+        problem.phases(iphase).guess.states.row(0) = linspace(x1_init * factor_init, x1_init * factor_final, nnodes);
+        problem.phases(iphase).guess.states.row(1) = linspace(x2_init * factor_init, x2_init * factor_final, nnodes);
+        problem.phases(iphase).guess.states.row(2) = linspace(x3_init * factor_init, x3_init * factor_final, nnodes);
+        problem.phases(iphase).guess.states.row(3) = linspace(x4_init * factor_init, x4_init * factor_final, nnodes);
     }
 
-    problem.phases(1).guess.states.row(0) = linspace(x1_init, x1_init * 3 / 4, nnodes);
-    problem.phases(1).guess.states.row(1) = linspace(x2_init, x2_init * 3 / 4, nnodes);
-    problem.phases(1).guess.states.row(2) = linspace(x3_init, x3_init * 3 / 4, nnodes);
-    problem.phases(1).guess.states.row(3) = linspace(x4_init, x4_init * 3 / 4, nnodes);
+    // problem.phases(1).guess.states.row(0) = linspace(x1_init, x1_init * 3 / 4, nnodes);
+    // problem.phases(1).guess.states.row(1) = linspace(x2_init, x2_init * 3 / 4, nnodes);
+    // problem.phases(1).guess.states.row(2) = linspace(x3_init, x3_init * 3 / 4, nnodes);
+    // problem.phases(1).guess.states.row(3) = linspace(x4_init, x4_init * 3 / 4, nnodes);
 
-    problem.phases(2).guess.states.row(0) = linspace(x1_init * 3 / 4, x1_init * 2 / 4, nnodes);
-    problem.phases(2).guess.states.row(1) = linspace(x2_init * 3 / 4, x2_init * 2 / 4, nnodes);
-    problem.phases(2).guess.states.row(2) = linspace(x3_init * 3 / 4, x3_init * 2 / 4, nnodes);
-    problem.phases(2).guess.states.row(3) = linspace(x4_init * 3 / 4, x4_init * 2 / 4, nnodes);
+    // problem.phases(2).guess.states.row(0) = linspace(x1_init * 3 / 4, x1_init * 2 / 4, nnodes);
+    // problem.phases(2).guess.states.row(1) = linspace(x2_init * 3 / 4, x2_init * 2 / 4, nnodes);
+    // problem.phases(2).guess.states.row(2) = linspace(x3_init * 3 / 4, x3_init * 2 / 4, nnodes);
+    // problem.phases(2).guess.states.row(3) = linspace(x4_init * 3 / 4, x4_init * 2 / 4, nnodes);
 
-    problem.phases(3).guess.states.row(0) = linspace(x1_init * 2 / 4, x1_init * 1 / 4, nnodes);
-    problem.phases(3).guess.states.row(1) = linspace(x2_init * 2 / 4, x2_init * 1 / 4, nnodes);
-    problem.phases(3).guess.states.row(2) = linspace(x3_init * 2 / 4, x3_init * 1 / 4, nnodes);
-    problem.phases(3).guess.states.row(3) = linspace(x4_init * 2 / 4, x4_init * 1 / 4, nnodes);
+    // problem.phases(3).guess.states.row(0) = linspace(x1_init * 2 / 4, x1_init * 1 / 4, nnodes);
+    // problem.phases(3).guess.states.row(1) = linspace(x2_init * 2 / 4, x2_init * 1 / 4, nnodes);
+    // problem.phases(3).guess.states.row(2) = linspace(x3_init * 2 / 4, x3_init * 1 / 4, nnodes);
+    // problem.phases(3).guess.states.row(3) = linspace(x4_init * 2 / 4, x4_init * 1 / 4, nnodes);
 
-    problem.phases(4).guess.states.row(0) = linspace(x1_init * 1 / 4, 0, nnodes);
-    problem.phases(4).guess.states.row(1) = linspace(x2_init * 1 / 4, 0, nnodes);
-    problem.phases(4).guess.states.row(2) = linspace(x3_init * 1 / 4, 0, nnodes);
-    problem.phases(4).guess.states.row(3) = linspace(x4_init * 1 / 4, 0, nnodes);
+    // problem.phases(4).guess.states.row(0) = linspace(x1_init * 1 / 4, 0, nnodes);
+    // problem.phases(4).guess.states.row(1) = linspace(x2_init * 1 / 4, 0, nnodes);
+    // problem.phases(4).guess.states.row(2) = linspace(x3_init * 1 / 4, 0, nnodes);
+    // problem.phases(4).guess.states.row(3) = linspace(x4_init * 1 / 4, 0, nnodes);
 
     double tf = end_time;
     // double tf = 10;
 
-    problem.phases(1).guess.time = linspace(0, tf / 4, nnodes);
-    problem.phases(2).guess.time = linspace(tf / 4, tf * 2 / 4, nnodes);
-    problem.phases(3).guess.time = linspace(tf * 2 / 4, tf * 3 / 4, nnodes);
-    problem.phases(4).guess.time = linspace(tf * 3 / 4, tf, nnodes);
+    for (int iphase = 1; iphase != phases + 1; iphase++)
+    {
+        problem.phases(iphase).guess.time = linspace((iphase - 1) / phases, tf * iphase / phases, nnodes);
+    }
+
+    // problem.phases(1).guess.time = linspace(0, tf / 4, nnodes);
+    // problem.phases(2).guess.time = linspace(tf / 4, tf * 2 / 4, nnodes);
+    // problem.phases(3).guess.time = linspace(tf * 2 / 4, tf * 3 / 4, nnodes);
+    // problem.phases(4).guess.time = linspace(tf * 3 / 4, tf, nnodes);
 
     ////////////////////////////////////////////////////////////////////////////
     ///////////////////  Now call PSOPT to solve the problem   /////////////////
@@ -492,34 +524,41 @@ int main(void)
     ////////////////////////////////////////////////////////////////////////////
 
     MatrixXd x, u, t;
-    MatrixXd x_ph1, u_ph1, t_ph1;
-    MatrixXd x_ph2, u_ph2, t_ph2;
-    MatrixXd x_ph3, u_ph3, t_ph3;
-    MatrixXd x_ph4, u_ph4, t_ph4;
+    MatrixXd x_ph, u_ph, t_ph;
 
-    x_ph1 = solution.get_states_in_phase(1);
-    u_ph1 = solution.get_controls_in_phase(1);
-    t_ph1 = solution.get_time_in_phase(1);
+    // x_ph1 = solution.get_states_in_phase(1);
+    // u_ph1 = solution.get_controls_in_phase(1);
+    // t_ph1 = solution.get_time_in_phase(1);
 
-    x_ph2 = solution.get_states_in_phase(2);
-    u_ph2 = solution.get_controls_in_phase(2);
-    t_ph2 = solution.get_time_in_phase(2);
+    // x_ph2 = solution.get_states_in_phase(2);
+    // u_ph2 = solution.get_controls_in_phase(2);
+    // t_ph2 = solution.get_time_in_phase(2);
 
-    x_ph3 = solution.get_states_in_phase(3);
-    u_ph3 = solution.get_controls_in_phase(3);
-    t_ph3 = solution.get_time_in_phase(3);
+    // x_ph3 = solution.get_states_in_phase(3);
+    // u_ph3 = solution.get_controls_in_phase(3);
+    // t_ph3 = solution.get_time_in_phase(3);
 
-    x_ph4 = solution.get_states_in_phase(4);
-    u_ph4 = solution.get_controls_in_phase(4);
-    t_ph4 = solution.get_time_in_phase(4);
+    // x_ph4 = solution.get_states_in_phase(4);
+    // u_ph4 = solution.get_controls_in_phase(4);
+    // t_ph4 = solution.get_time_in_phase(4);
 
-    x.resize(4, length(t_ph1) + length(t_ph2) + length(t_ph3) + length(t_ph4));
-    u.resize(1, length(t_ph1) + length(t_ph2) + length(t_ph3) + length(t_ph4));
-    t.resize(1, length(t_ph1) + length(t_ph2) + length(t_ph3) + length(t_ph4));
+    x.resize(4, nodes * phases);
+    u.resize(1, nodes * phases);
+    t.resize(1, nodes * phases);
 
-    x << x_ph1, x_ph2, x_ph3, x_ph4;
-    u << u_ph1, u_ph2, u_ph3, u_ph4;
-    t << t_ph1, t_ph2, t_ph3, t_ph4;
+    for (int iphase = 1; iphase != phases + 1; iphase++)
+    {
+        x_ph = solution.get_states_in_phase(iphase);
+        u_ph = solution.get_controls_in_phase(iphase);
+        t_ph = solution.get_time_in_phase(iphase);
+        x << x_ph;
+        u << u_ph;
+        t << t_ph;
+    }
+
+    // x << x_ph1, x_ph2, x_ph3, x_ph4;
+    // u << u_ph1, u_ph2, u_ph3, u_ph4;
+    // t << t_ph1, t_ph2, t_ph3, t_ph4;
     // lambda = solution.get_dual_costates_in_phase(1);
     // H      = solution.get_dual_hamiltonian_in_phase(1);
 
