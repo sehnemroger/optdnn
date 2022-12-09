@@ -311,8 +311,8 @@ int main(void)
         problem.phases(iphases).nstates = nstates;
         problem.phases(iphases).ncontrols = ncontrols;
         problem.phases(iphases).npath = 0;
-        // problem.phases(iphases).nodes             = (RowVectorXi(2) << 15, nodes).finished(); // numeros de nós em sequencia
-        problem.phases(iphases).nodes = (RowVectorXi(3) << 10, 15, nodes).finished(); // numeros de nós em sequencia
+        problem.phases(iphases).nodes             = (RowVectorXi(2) << 15, nodes).finished(); // numeros de nós em sequencia
+        // problem.phases(iphases).nodes = (RowVectorXi(3) << 10, 15, nodes).finished(); // numeros de nós em sequencia
         // problem.phases(iphases).nodes << nodes;
         problem.phases(iphases).nevents = 0;
     }
@@ -344,9 +344,9 @@ int main(void)
     Constants_pendulum.translation_friction_coefficient = 0.2;
     Constants_pendulum.rotation_friction_coefficient = 0.2;
 
-    double x1_init = -1.0;
-    double x2_init = 1.0;
-    double x3_init = 3.1415;
+    double x1_init = -5.0;
+    double x2_init = 5.0;
+    double x3_init = -3.1415;
     double x4_init = -1.0;
 
     initial_conditions.x1 = x1_init;
