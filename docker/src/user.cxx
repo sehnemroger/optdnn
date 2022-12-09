@@ -427,8 +427,15 @@ int main(void)
     MatrixXd x4is = zeros(1, n_per_dim);
 
     // Define the minimum and maximum values for the initial conditions
-    double x1_lower_ci = .01, x2_lower_ci = .01, x3_lower_ci = .01, x4_lower_ci = .01;
     double x1_upper_ci = 1, x2_upper_ci = 1, x3_upper_ci = 3.1415, x4_upper_ci = 1;
+    // Defining the lower initial conditions like this makes each CI have the same increment
+    // 0 - CI_1, C1_1 - CI_2, ..., CI_{n_per_dim}
+    // which is desirable since this will make the DB very simetric and not 
+    // concetrated in any particular region.
+    double x1_lower_ci = x1_upper_ci / n_per_dim;
+    double x2_lower_ci = x2_upper_ci / n_per_dim;
+    double x3_lower_ci = x3_upper_ci / n_per_dim;
+    double x4_lower_ci = x4_upper_ci / n_per_dim;
 
     x1is = linspace(x1_lower_ci, x1_upper_ci, n_per_dim);
     x2is = linspace(x2_lower_ci, x2_upper_ci, n_per_dim);
