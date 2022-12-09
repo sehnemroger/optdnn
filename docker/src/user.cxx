@@ -304,16 +304,16 @@ int main(void)
     /////////   Define phase related information & do level 2 setup  ////////////
     /////////////////////////////////////////////////////////////////////////////
 
-    int nodes = 15;
+    int nodes = 20;
 
     for (int iphases = 1; iphases != phases + 1; iphases++)
     {
         problem.phases(iphases).nstates = nstates;
         problem.phases(iphases).ncontrols = ncontrols;
         problem.phases(iphases).npath = 0;
-        // problem.phases(iphases).nodes             = (RowVectorXi(2) << 15, 18).finished(); // numeros de nós em sequencia
-        // problem.phases(iphases).nodes = (RowVectorXi(3) << 15, 20, 25).finished(); // numeros de nós em sequencia
-        problem.phases(iphases).nodes << nodes;
+        // problem.phases(iphases).nodes             = (RowVectorXi(2) << 15, nodes).finished(); // numeros de nós em sequencia
+        problem.phases(iphases).nodes = (RowVectorXi(3) << 10, 15, nodes).finished(); // numeros de nós em sequencia
+        // problem.phases(iphases).nodes << nodes;
         problem.phases(iphases).nevents = 0;
     }
 
@@ -546,14 +546,22 @@ int main(void)
     u.resize(1, nodes * phases);
     t.resize(1, nodes * phases);
 
+    std::cout << "declaração passed" << std::endl;
+
     for (int iphase = 1; iphase != phases + 1; iphase++)
     {
         x_ph = solution.get_states_in_phase(iphase);
         u_ph = solution.get_controls_in_phase(iphase);
         t_ph = solution.get_time_in_phase(iphase);
-        x << x_ph;
-        u << u_ph;
-        t << t_ph;
+        int count_att = 0;
+        for (int column = (iphase - 1) * nodes; column != (iphase - 1) * nodes + nodes; column++)
+        {   
+            x.col(column) = x_ph.col(count_att);
+            u.col(column) = u_ph.col(count_att);
+            t.col(column) = t_ph.col(count_att);
+            count_att++;
+        
+        }
     }
 
     // x << x_ph1, x_ph2, x_ph3, x_ph4;
