@@ -420,22 +420,22 @@ int main(void)
     //////////////////  Define Initial Conditions  /////////////////////////////
     ////////////////////////////////////////////////////////////////////////////
     // Carefull, the total number of solutions will be in the power of 4.
-    const int n_per_dim = 3;
+    const int n_per_dim = 4;
     MatrixXd x1is = zeros(1, n_per_dim);
     MatrixXd x2is = zeros(1, n_per_dim);
     MatrixXd x3is = zeros(1, n_per_dim);
     MatrixXd x4is = zeros(1, n_per_dim);
 
     // Define the minimum and maximum values for the initial conditions
-    double x1_upper_ci = 1, x2_upper_ci = 1, x3_upper_ci = 3.1415, x4_upper_ci = 1;
-    // Defining the lower initial conditions like this makes each CI have the same increment
-    // 0 - CI_1, C1_1 - CI_2, ..., CI_{n_per_dim}
-    // which is desirable since this will make the DB very simetric and not 
-    // concetrated in any particular region.
-    double x1_lower_ci = x1_upper_ci / n_per_dim;
-    double x2_lower_ci = x2_upper_ci / n_per_dim;
-    double x3_lower_ci = x3_upper_ci / n_per_dim;
-    double x4_lower_ci = x4_upper_ci / n_per_dim;
+    double x1_lower_ci = 0;
+    double x2_lower_ci = 0;
+    double x3_lower_ci = 0;
+    double x4_lower_ci = 0;
+
+    double x1_upper_ci = .7;
+    double x2_upper_ci = 4;
+    double x3_upper_ci = 3.1415;
+    double x4_upper_ci = 3.1415;
 
     x1is = linspace(x1_lower_ci, x1_upper_ci, n_per_dim);
     x2is = linspace(x2_lower_ci, x2_upper_ci, n_per_dim);
@@ -508,7 +508,7 @@ int main(void)
                     ///////////////////  Define & register initial guess ///////////////////////
                     ////////////////////////////////////////////////////////////////////////////
 
-                    if (count == 0)
+                    if (count == 0 | count == 1)
                     {
                         for (int iphase = 1; iphase != phases + 1; iphase++)
                         {
