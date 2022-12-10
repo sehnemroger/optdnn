@@ -290,7 +290,7 @@ int main(void)
     ////////////  Define problem level constants & do level 1 setup ////////////
     ////////////////////////////////////////////////////////////////////////////
 
-    int phases = 6;
+    int phases = 10;
     int nstates = 4;
     int ncontrols = 1;
 
@@ -304,14 +304,14 @@ int main(void)
     /////////   Define phase related information & do level 2 setup  ////////////
     /////////////////////////////////////////////////////////////////////////////
 
-    int nodes = 20;
+    int nodes = 25;
 
     for (int iphases = 1; iphases != phases + 1; iphases++)
     {
         problem.phases(iphases).nstates = nstates;
         problem.phases(iphases).ncontrols = ncontrols;
         problem.phases(iphases).npath = 0;
-        problem.phases(iphases).nodes             = (RowVectorXi(2) << 15, nodes).finished(); // numeros de nós em sequencia
+        problem.phases(iphases).nodes             = (RowVectorXi(3) << 15, 20, nodes).finished(); // numeros de nós em sequencia
         // problem.phases(iphases).nodes = (RowVectorXi(3) << 10, 15, nodes).finished(); // numeros de nós em sequencia
         // problem.phases(iphases).nodes << nodes;
         problem.phases(iphases).nevents = 0;
@@ -337,17 +337,17 @@ int main(void)
     ///////////////////  declare local variables  //////////////////////////////
     ////////////////////////////////////////////////////////////////////////////
 
-    Constants_pendulum.rod_length = 0.3;
-    Constants_pendulum.rod_inertia = 2;
-    Constants_pendulum.rod_mass = 1;
-    Constants_pendulum.cart_mass = 3;
+    Constants_pendulum.rod_length = 0.43;
+    Constants_pendulum.rod_inertia = 0.0409;
+    Constants_pendulum.rod_mass = 0.17;
+    Constants_pendulum.cart_mass = 6;
     Constants_pendulum.translation_friction_coefficient = 0.2;
     Constants_pendulum.rotation_friction_coefficient = 0.2;
 
-    double x1_init = -5.0;
-    double x2_init = 5.0;
-    double x3_init = -3.1415;
-    double x4_init = -1.0;
+    double x1_init = .7;
+    double x2_init = 4.0;
+    double x3_init = 3.1415;
+    double x4_init = 3.1415;
 
     initial_conditions.x1 = x1_init;
     initial_conditions.x2 = x2_init;

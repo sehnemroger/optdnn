@@ -257,7 +257,7 @@ int main(void)
     ////////////  Define problem level constants & do level 1 setup ////////////
     ////////////////////////////////////////////////////////////////////////////
 
-    int phases = 6;
+    int phases = 10;
     int nstates = 4;
     int ncontrols = 1;
 
@@ -278,7 +278,7 @@ int main(void)
         problem.phases(iphases).nstates = nstates;
         problem.phases(iphases).ncontrols = ncontrols;
         problem.phases(iphases).npath = 0;
-        problem.phases(iphases).nodes = (RowVectorXi(2) << 15, nodes).finished(); // numeros de nós em sequencia
+        problem.phases(iphases).nodes = (RowVectorXi(2) << 15, 18).finished(); // numeros de nós em sequencia
         // problem.phases(iphases).nodes = (RowVectorXi(3) << 10, 15, nodes).finished(); // numeros de nós em sequencia
         // problem.phases(iphases).nodes << nodes;
         problem.phases(iphases).nevents = 0;
@@ -420,7 +420,7 @@ int main(void)
     //////////////////  Define Initial Conditions  /////////////////////////////
     ////////////////////////////////////////////////////////////////////////////
     // Carefull, the total number of solutions will be in the power of 4.
-    const int n_per_dim = 5;
+    const int n_per_dim = 4;
     MatrixXd x1is = zeros(1, n_per_dim);
     MatrixXd x2is = zeros(1, n_per_dim);
     MatrixXd x3is = zeros(1, n_per_dim);
@@ -433,7 +433,7 @@ int main(void)
     double x4_lower_ci = 0;
 
     double x1_upper_ci = .7;
-    double x2_upper_ci = 4;
+    double x2_upper_ci = 4.0;
     double x3_upper_ci = 3.1415;
     double x4_upper_ci = 3.1415;
 
@@ -546,7 +546,7 @@ int main(void)
                             problem.phases(iphase).guess.controls = u_ph;
                             problem.phases(iphase).guess.states = x_ph;
                             problem.phases(iphase).guess.time = t_ph;
-                            problem.phases(iphase).nodes = (RowVectorXi(2) << nodes, nodes).finished();
+                            problem.phases(iphase).nodes = (RowVectorXi(1) << nodes).finished();
                         }
                     }
 
