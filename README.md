@@ -30,7 +30,7 @@ make
 This will create your compiled file in `/PSOPT/build/examples/user`.
 
 ### Run inside the docker container
-To run inside the docker container we will have to bind mount two folders with the container, namely, `/build` to `~/build/examples/user` and `/src` to `~/examples/user`, this means that you will have to place your `.cxx` file inside `/build` and then, to run, just run in your terminal the following command:
+To run inside the docker container we will have to bind mount two folders with the container, namely, `/build` to `~/build/examples/user` and `/src` to `~/examples/user`, this means that you will have to place your `.cxx` file inside `/src` and then, to run, just run in your terminal the following command:
 ```
 docker run -it --rm -v $PWD/src:/usr/src/optdnn/psopt/examples/user/ -v $PWD/build:/usr/src/optdnn/psopt/build/examples/user optdnn_env:latest bash
 
