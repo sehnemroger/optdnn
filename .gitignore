@@ -10,4 +10,4 @@ PSOPT*
 /docker/build/*.dat
 /docker/build/*.out
 /docker/build/*.tex
-/python/opt_traj/*.dat
+/python/*/*.dat
