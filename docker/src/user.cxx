@@ -306,10 +306,10 @@ int main(void)
     ///////////////////  declare local variables  //////////////////////////////
     ////////////////////////////////////////////////////////////////////////////
 
-    Constants_pendulum.rod_length = 0.3;
-    Constants_pendulum.rod_inertia = 2;
-    Constants_pendulum.rod_mass = 1;
-    Constants_pendulum.cart_mass = 3;
+    Constants_pendulum.rod_length = 0.43;
+    Constants_pendulum.rod_inertia = 0.0409;
+    Constants_pendulum.rod_mass = 0.17;
+    Constants_pendulum.cart_mass = 6;
     Constants_pendulum.translation_friction_coefficient = 0.2;
     Constants_pendulum.rotation_friction_coefficient = 0.2;
 
@@ -420,7 +420,7 @@ int main(void)
     //////////////////  Define Initial Conditions  /////////////////////////////
     ////////////////////////////////////////////////////////////////////////////
     // Carefull, the total number of solutions will be in the power of 4.
-    const int n_per_dim = 4;
+    const int n_per_dim = 5;
     MatrixXd x1is = zeros(1, n_per_dim);
     MatrixXd x2is = zeros(1, n_per_dim);
     MatrixXd x3is = zeros(1, n_per_dim);
@@ -546,7 +546,7 @@ int main(void)
                             problem.phases(iphase).guess.controls = u_ph;
                             problem.phases(iphase).guess.states = x_ph;
                             problem.phases(iphase).guess.time = t_ph;
-                            problem.phases(iphase).nodes = (RowVectorXi(1) << nodes).finished();
+                            problem.phases(iphase).nodes = (RowVectorXi(2) << nodes, nodes).finished();
                         }
                     }
 
