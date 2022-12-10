@@ -432,10 +432,10 @@ int main(void)
     double x3_lower_ci = 0;
     double x4_lower_ci = 0;
 
-    double x1_upper_ci = .7;
-    double x2_upper_ci = 4.0;
+    double x1_upper_ci = -.7;
+    double x2_upper_ci = -4.0;
     double x3_upper_ci = 3.1415;
-    double x4_upper_ci = -3.1415;
+    double x4_upper_ci = 3.1415;
 
     x1is = linspace(x1_lower_ci, x1_upper_ci, n_per_dim);
     x2is = linspace(x2_lower_ci, x2_upper_ci, n_per_dim);
