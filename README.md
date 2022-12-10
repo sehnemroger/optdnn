@@ -38,3 +38,9 @@ docker run -it --rm -v $PWD/src:/usr/src/optdnn/psopt/examples/user/ -v $PWD/bui
 In this command `-u$(id -u):$(id -g)` maps your user to the docker container user, `-it` runs interactively, `--rm` deletes the container after you leave, `-v $PWD/src:/usr/src/optdnn/psopt/examples/user/` bind mount `/src` to `/examples/user`, `-v $PWD/build:/usr/src/optdnn/psopt/build/examples/user` bind mount `/build` to `/build/examples/user`, `optdnn_env:latest` is the image and `bash` runs the bash.
 
 With this your implemented `.cxx` file is already inside `/psopt/examples/user/` and you can just cd to `/psopt/build/examples/user` and run `make` and then the `user` executable.
+
+### Run TensorFlow in Docker
+To run tensorflow inside the docker container use the following command
+```
+docker run -it --rm -v $PWD:/tmp -w /tmp optdnn_env:latest python ./script.py
+```
