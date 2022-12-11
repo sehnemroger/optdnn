@@ -34,7 +34,7 @@ class CustomModel(tf.keras.Model):
             # output of the dnn a lyapunov function for the system.
             ## Calculating Vdot
             # definindo constantes
-            l, I, mb, mc, at, ar = 0.3, 2, 1, 3, .2, .2
+            l, I, mb, mc, at, ar = 0.43, 0.0409, 0.17, 6, .2, .2
             # Gradient of the V output wrt inputs
             dVdx = tape2.gradient(V,x)
             
@@ -77,21 +77,19 @@ def custom_loss(y_true, y_pred):
     return alpha*msle(y_true, y_pred)+(1-alpha)*mse(y_true, y_pred)
 
 ## Loading trained model
+#model_old = tf.keras.models.load_model('python/dnn_trained_batchnorm.h5',
+#    custom_objects={ 'custom_loss': custom_loss})
 
-model_old = tf.keras.models.load_model('python/dnn_trained_batchnorm.h5',
+model = tf.keras.models.load_model('python/dnn_trained_batchnorm.h5',
     custom_objects={ 'custom_loss': custom_loss})
 
-model = tf.keras.models.load_model('python/dnn_trained_batchnorm_lyap.h5',
-    custom_objects={ 'custom_loss': custom_loss,
-        'CustomModel': CustomModel})
-
 model.summary()
-model_old.summary()
+#model_old.summary()
 
 ## Simulando o sistema e plotando as saidas
 # definindo o sistema a ser integrado
 def controle(t,x):
-    u = model.predict(np.array([x]))[0,0]
+    u = model.predict(np.array([x]))
     return u
 
 def controle_old(t,x):
@@ -113,10 +111,8 @@ def invert_pend(t,x,l,I,mb,mc,at,ar,is_old):
     dxdt = [x2, x2p, x4, x4p]
     return dxdt
 
-
-
 # definindo constantes
-l, I, mb, mc, at, ar = 0.3, 2, 1, 3, .2, .2
+l, I, mb, mc, at, ar = 0.43, 0.0409, 0.17, 6, .2, .2
 
 # Condição inicial
 x0 = [0, 0, .1415, 0]
@@ -130,7 +126,7 @@ print('Estado inicial: \n '
 # Resolvendo o PVI
 from scipy.integrate import solve_ivp
 sol = solve_ivp(invert_pend, [0,30] ,x0, args=(l,I,mb,mc,at,ar, False))
-sol_old = solve_ivp(invert_pend, [0,30] ,x0, args=(l,I,mb,mc,at,ar,True))
+#sol_old = solve_ivp(invert_pend, [0,30] ,x0, args=(l,I,mb,mc,at,ar,True))
 #sol = odeint(invert_pend, x0, [0,30] , tfirst=True, args=(l,I,mb,mc,at,ar))
 
 # Recalcula o controle
@@ -139,10 +135,10 @@ F = np.zeros_like(t)
 for i in range(len(t)):
     F[i] = controle(t[i],sol.y[:,i])
 
-t_old=sol.t
-F_old = np.zeros_like(t)
-for i in range(len(t)):
-    F_old[i] = controle_old(t_old[i],sol_old.y[:,i])
+# t_old=sol.t
+# F_old = np.zeros_like(t)
+# for i in range(len(t)):
+#     F_old[i] = controle_old(t_old[i],sol_old.y[:,i])
 
 # Indice de desempenho
 r = 1
@@ -156,56 +152,55 @@ Jt = np.zeros_like(t)
 for i in range(len(t)):
     Jt[i] = desemp(sol.y[:,i],F[i],t[i])
 
-Jt_old = np.zeros_like(t_old)
-for i in range(len(t_old)):
-    Jt_old[i] = desemp(sol_old.y[:,i],F_old[i],t_old[i])
-
+# Jt_old = np.zeros_like(t_old)
+# for i in range(len(t_old)):
+#     Jt_old[i] = desemp(sol_old.y[:,i],F_old[i],t_old[i])
 
 J = np.trapz(Jt,x=t)
 print('O novo indice de desempenh é: ' + str(J))
 
-J_old = np.trapz(Jt_old,x=t)
-print('O novo indice de desempenh é: ' + str(J_old))
+# J_old = np.trapz(Jt_old,x=t)
+# print('O novo indice de desempenh é: ' + str(J_old))
 # Plotando os resultados
-matplotlib.rcParams['text.usetex'] = True # habilitando tex 
+#matplotlib.rcParams['text.usetex'] = True # habilitando tex 
 
 fig, axs = plt.subplots(2,3,figsize=(6,4), tight_layout=True)
 axs[0,0].plot(t,sol.y[0,:],color=(0,0,1))
-axs[0,0].plot(t_old,sol_old.y[0,:],color=(.4,.4,1))
+#axs[0,0].plot(t_old,sol_old.y[0,:],color=(.4,.4,1))
 axs[0,0].legend((r'$x(t)$',r'$x_old(t)$'),loc=1)
 axs[0,0].set_xlabel('$s$')
 axs[0,0].set_ylabel('$[m]$')
 
 axs[0,1].plot(t,sol.y[1,:],color=(0,0,1))
-axs[0,1].plot(t_old,sol_old.y[1,:],color=(.4,.4,1))
+#axs[0,1].plot(t_old,sol_old.y[1,:],color=(.4,.4,1))
 axs[0,1].legend((r'$\dot{x}(t)$',r'$\dot{x}_old(t)$'),loc=1)
 axs[0,1].set_xlabel('$s$')
 axs[0,1].set_ylabel('$[ms^{-1}]$')
 
 axs[1,0].plot(t,sol.y[2,:]*180/np.pi,color=(0,0,1))
-axs[1,0].plot(t_old,sol_old.y[2,:]*180/np.pi,color=(.4,.4,1))
+#axs[1,0].plot(t_old,sol_old.y[2,:]*180/np.pi,color=(.4,.4,1))
 axs[1,0].legend((r'$\theta(t)$',r'$\theta_old(t)$'),loc=1)
 axs[1,0].set_xlabel('$s$')
 axs[1,0].set_ylabel('$[^\circ]$')
 
 axs[1,1].plot(t,sol.y[2,:]*180/np.pi,color=(0,0,1))
-axs[1,1].plot(t_old,sol_old.y[2,:]*180/np.pi,color=(.4,.4,1))
+#axs[1,1].plot(t_old,sol_old.y[2,:]*180/np.pi,color=(.4,.4,1))
 axs[1,1].legend((r'$\dot{\theta}{x}(t)$',r'$\dot{\theta}_old{x}(t)$'),loc=1)
 axs[1,1].set_xlabel('$s$')
 axs[1,1].set_ylabel('$[^\circ s^{-1}]$')
 
 axs[0,2].plot(t,F, color=(0,0,1))
-axs[0,2].plot(t_old,F_old, color=(.4,.4,1))
+#axs[0,2].plot(t_old,F_old, color=(.4,.4,1))
 axs[0,2].legend((r'$F(t)$',r'$F_old(t)$'),loc=1)
 axs[0,2].set_xlabel('$s$')
 axs[0,2].set_ylabel('$[N]$')
 
 axs[1,2].plot(t,F, color=(0,0,1))
-axs[1,2].plot(t_old,F_old, color=(.4,.4,1))
+#axs[1,2].plot(t_old,F_old, color=(.4,.4,1))
 axs[1,2].legend((r'$F(t)$',r'$F_old(t)$'),loc=1)
 axs[1,2].set_xlabel('$s$')
 axs[1,2].set_ylabel('$[N]$')
 
-for i in range(3):
-    axs[i].grid(True)
+# for i in range(3):
+#     axs[i].grid(True)
 plt.show()

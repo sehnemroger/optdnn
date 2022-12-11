@@ -6,63 +6,48 @@ import glob
 import os
 
 path = os.path.abspath(os.getcwd())
-files = glob.glob(path + "/data_csv/" + "*.txt")  # Get all .txt files in the folder
+# RUN IN CPU
+# files = glob.glob(path + "/python/Results/*/" + "*.dat")  # Get all .txt files in the folder
+# RUN IN GPU
+files = glob.glob(path + "/Results/*/" + "*.dat") 
 
-# Randomizing data
-p = np.random.permutation(len(files))
+complete_list = []
+for file in files:
+    with open(file) as iter_file:
+        for line in iter_file:
+            local_list = []
+            line_splited = line.split()
+            for item in line_splited:
+                local_list.append(float(item))
+            complete_list.append(local_list)
 
-# Creating train and tests sets. Train set is 80% of the whole set.
-# The index of the closest to 80% (or something like that)
-index280 = int(np.floor(0.8 * len(files)))
-idx_cp_train_filepaths = p[:index280]
-idx_test_filepaths = p[index280:]
-test_filepaths = [files[i] for i in idx_test_filepaths]
+data = np.array(complete_list)
 
-# Creating train and validation sets with 80% of the whole train set.
-index280train = int(np.floor(0.8 * len(idx_cp_train_filepaths)))
-idx_train_filepaths = idx_cp_train_filepaths[:index280train]
-idx_valid_filepaths = idx_cp_train_filepaths[index280train:]
-train_filepaths = [files[i] for i in idx_train_filepaths]
-valid_filepaths = [files[i] for i in idx_valid_filepaths]
+p = np.random.permutation(data.shape[0])
+index280 = int(np.floor(0.8 * data.shape[0]))
 
-## Creating a dataset
-def preprocess(line):  # Function that preprocess the line
-    defs = [
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        tf.constant([], dtype=tf.float32),
-    ]  # have to change this
-    fields = tf.io.decode_csv(line, record_defaults=defs)  # This reads only csv files,
-    # the easiest way is to convert the database to csv files with a script.
-    x = tf.stack(fields[:-5])
-    y = tf.stack(fields[-1:])
-    return x, y
+idx_cp_train_file = p[:index280]
+idx_test_file = p[index280:]
+test_file = [data[i] for i in idx_test_file]
 
+# # Creating train and validation sets with 80% of the whole train set.
+index280train = int(np.floor(0.8 * len(idx_cp_train_file)))
+idx_train_file = idx_cp_train_file[:index280train]
+idx_valid_file = idx_cp_train_file[index280train:]
+train_file = [data[i] for i in idx_train_file]
+valid_file = [data[i] for i in idx_valid_file]
 
-def dataset_reader(
-    filepaths, repeat=1, n_readers=8, shuffle_buffer_size=10000, batch_size=256
-):
-    dataset = tf.data.Dataset.list_files(filepaths)
-    dataset = dataset.interleave(
-        lambda filepath: tf.data.TextLineDataset(filepath),
-        cycle_length=n_readers,
-        num_parallel_calls=tf.data.AUTOTUNE,
-    )
-    dataset = dataset.map(preprocess, num_parallel_calls=tf.data.AUTOTUNE)
-    dataset = dataset.shuffle(shuffle_buffer_size).repeat(repeat)
-    return dataset.batch(batch_size).prefetch(tf.data.AUTOTUNE)
+train_set = np.array(train_file)[:,1:]
+valid_set = np.array(valid_file)[:,1:]
+test_set = np.array(test_file)[:,1:]
 
+x_train = train_set[:,:-1]
+x_test  = test_set[:,:-1]
+x_valid = valid_set[:,:-1]
 
-train_set = dataset_reader(train_filepaths)
-valid_set = dataset_reader(valid_filepaths)
-test_set = dataset_reader(test_filepaths)
-
+y_train = train_set[:,-1]
+y_test  = test_set[:,-1]
+y_valid = valid_set[:,-1]
 
 ## Creating the DNN
 layers = 15
@@ -73,6 +58,8 @@ for i in range(layers):
     mid = keras.layers.BatchNormalization()(mid)
 outputs = keras.layers.Dense(1, activation="linear")(mid)
 model = tf.keras.Model(inputs, outputs)
+
+model.summary()
 
 ## Creating custom loss Function
 def custom_loss(y_true, y_pred):
@@ -102,24 +89,24 @@ model.compile(
 # print(tf.config.list_physical_devices('GPU'))
 with tf.device("/GPU:0"):
     history = model.fit(
-        train_set,
-        epochs=1000,
-        validation_data=valid_set,
+        x = x_train,
+        y = y_train,
+        epochs = 1000,
+        validation_data = (x_valid, y_valid),
         callbacks=[lr_scheduler, early_stop],
     )
-
 
 # ## Loading trained model
 # model = tf.keras.models.load_model('dnn_trained_segundo.h5')
 
 ## Mean Square error on the test set
-mse_test = model.evaluate(test_set)
-
+mse_test = model.evaluate(x = x_test, y = y_test)
 
 ## Saves the model
 model.save("dnn_trained_batchnorm.h5")
 
 # ## Plot learning curves
+
 # import pandas as pd
 # import matplotlib.pyplot as plt
 # pd.DataFrame(history.history).plot(figsize=(8, 5))
