@@ -1,5 +1,5 @@
 ## Pull official tensorflow image compatible with gpu
-FROM ubuntu:20.04
+FROM tensorflow/tensorflow:latest-gpu
 
 ENV DEBIAN_FRONTEND=noninteractive
 

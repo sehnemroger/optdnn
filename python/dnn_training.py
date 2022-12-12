@@ -4,12 +4,23 @@ from tensorflow import keras
 from pickle import dump
 import glob
 import os
+from tensorflow.compat.v1 import ConfigProto
+from tensorflow.compat.v1 import InteractiveSession
+
+# configurate to allow memory dynamic allocation on gpu
+config = ConfigProto()
+config.gpu_options.allow_growth = True
+session = InteractiveSession(config=config)
+
+config = ConfigProto()
+config.gpu_options.allow_growth = True
+session = InteractiveSession(config=config)
 
 path = os.path.abspath(os.getcwd())
 # RUN IN CPU
 # files = glob.glob(path + "/python/Results/*/" + "*.dat")  # Get all .txt files in the folder
 # RUN IN GPU
-files = glob.glob(path + "/Results/*/" + "*.dat") 
+files = glob.glob(path + "/Results/*/" + "*.dat")
 
 complete_list = []
 for file in files:
@@ -37,17 +48,17 @@ idx_valid_file = idx_cp_train_file[index280train:]
 train_file = [data[i] for i in idx_train_file]
 valid_file = [data[i] for i in idx_valid_file]
 
-train_set = np.array(train_file)[:,1:]
-valid_set = np.array(valid_file)[:,1:]
-test_set = np.array(test_file)[:,1:]
+train_set = np.array(train_file)[:, 1:]
+valid_set = np.array(valid_file)[:, 1:]
+test_set = np.array(test_file)[:, 1:]
 
-x_train = train_set[:,:-1]
-x_test  = test_set[:,:-1]
-x_valid = valid_set[:,:-1]
+x_train = train_set[:, :-1]
+x_test = test_set[:, :-1]
+x_valid = valid_set[:, :-1]
 
-y_train = train_set[:,-1]
-y_test  = test_set[:,-1]
-y_valid = valid_set[:,-1]
+y_train = train_set[:, -1]
+y_test = test_set[:, -1]
+y_valid = valid_set[:, -1]
 
 ## Creating the DNN
 layers = 15
@@ -61,7 +72,7 @@ model = tf.keras.Model(inputs, outputs)
 
 model.summary()
 
-## Creating custom loss Function
+# Creating custom loss Function
 def custom_loss(y_true, y_pred):
     alpha = 0.1
     msle = tf.keras.losses.MeanSquaredLogarithmicError()
@@ -71,12 +82,12 @@ def custom_loss(y_true, y_pred):
 
 # # preload treined model
 # model = tf.keras.models.load_model('dnn_trained_segundo.h5',custom_objects={ 'custom_loss': custom_loss})
-## Compiling the model
+# Compiling the model
 lr_scheduler = keras.callbacks.ReduceLROnPlateau(
-    factor=0.5, patience=3, verbose=1, min_lr=0.000001
+    monitor='loss', factor=0.5, patience=20, verbose=1, min_lr=0.000001
 )
 early_stop = tf.keras.callbacks.EarlyStopping(
-    monitor="loss", patience=10, restore_best_weights=True
+    monitor='loss', patience=100, restore_best_weights=True
 )
 model.compile(
     loss=custom_loss,
@@ -84,15 +95,16 @@ model.compile(
     optimizer=keras.optimizers.Nadam(learning_rate=0.001),
 )
 
-## Training the dnn
+# Training the dnn
 # from tensorflow.python.client import device_lib
 # print(tf.config.list_physical_devices('GPU'))
 with tf.device("/GPU:0"):
     history = model.fit(
-        x = x_train,
-        y = y_train,
-        epochs = 1000,
-        validation_data = (x_valid, y_valid),
+        x=x_train,
+        y=y_train,
+        epochs=10000,
+        batch_size=256,
+        validation_data=(x_valid, y_valid),
         callbacks=[lr_scheduler, early_stop],
     )
 
@@ -100,7 +112,7 @@ with tf.device("/GPU:0"):
 # model = tf.keras.models.load_model('dnn_trained_segundo.h5')
 
 ## Mean Square error on the test set
-mse_test = model.evaluate(x = x_test, y = y_test)
+mse_test = model.evaluate(x=x_test, y=y_test)
 
 ## Saves the model
 model.save("dnn_trained_batchnorm.h5")
