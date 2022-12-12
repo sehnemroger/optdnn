@@ -61,11 +61,11 @@ y_test = test_set[:, -1]
 y_valid = valid_set[:, -1]
 
 ## Creating the DNN
-layers = 15
+layers = 20
 inputs = keras.Input(shape=4)
 mid = keras.layers.Dense(4, activation="linear")(inputs)
 for i in range(layers):
-    mid = keras.layers.Dense(10, activation="sigmoid")(mid)
+    mid = keras.layers.Dense(20, activation="sigmoid")(mid)
     mid = keras.layers.BatchNormalization()(mid)
 outputs = keras.layers.Dense(1, activation="linear")(mid)
 model = tf.keras.Model(inputs, outputs)
@@ -84,7 +84,7 @@ def custom_loss(y_true, y_pred):
 # model = tf.keras.models.load_model('dnn_trained_segundo.h5',custom_objects={ 'custom_loss': custom_loss})
 # Compiling the model
 lr_scheduler = keras.callbacks.ReduceLROnPlateau(
-    monitor='loss', factor=0.5, patience=20, verbose=1, min_lr=0.000001
+    monitor='loss', factor=0.5, patience=5, verbose=1, min_lr=0.000001
 )
 early_stop = tf.keras.callbacks.EarlyStopping(
     monitor='loss', patience=100, restore_best_weights=True
@@ -92,7 +92,7 @@ early_stop = tf.keras.callbacks.EarlyStopping(
 model.compile(
     loss=custom_loss,
     metrics=["mse"],
-    optimizer=keras.optimizers.Nadam(learning_rate=0.001),
+    optimizer=keras.optimizers.Adam(learning_rate=0.001),
 )
 
 # Training the dnn
