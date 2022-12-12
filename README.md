@@ -42,5 +42,5 @@ With this your implemented `.cxx` file is already inside `/psopt/examples/user/`
 ### Run TensorFlow in Docker
 To run tensorflow inside the docker container use the following command
 ```
-docker run -it --rm -v $PWD:/tmp -w /tmp optdnn_env:latest python ./script.py
+docker run --gpus all -it --rm -v $PWD:/tmp -w /tmp optdnn_env:latest python ./script.py
 ```
