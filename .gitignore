@@ -12,4 +12,4 @@ PSOPT*
 /docker/build/*.tex
 /python/*/*.dat
 Results/*/
-/python/Results/*/
+/python/Results/*/*
