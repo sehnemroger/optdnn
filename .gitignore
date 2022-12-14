@@ -13,3 +13,4 @@ PSOPT*
 /python/*/*.dat
 Results/*/
 python/Results/*/*.dat
+python/Results/*/*.txt
